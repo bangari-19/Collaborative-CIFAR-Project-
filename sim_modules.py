@@ -64,6 +64,7 @@ def generate_timeseries(start,len,contempamp, contempmat, contempcov, lagamp, la
         samples[i,:]+=np.random.multivariate_normal(np.zeros(size),measurecov) # adding additional measurement noise
     
     samples-=start
+    samples=samples[1:,:]
     return samples
 
 def clip_timeseries(timeseries, indices_to_clip, min_vec, max_vec):
