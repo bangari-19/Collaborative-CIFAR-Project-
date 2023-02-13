@@ -37,15 +37,15 @@ for number in range(input.num_participants)[0:2]:
     if input.measurecovName=='diag':
        measureCov= input.ampMeasure*np.eye(size)
     
+    if input.maskZero:
+        maskContemp =  sm.make_mask(matContemp, contemp=True)
+        maskLagged = sm.make_mask(matLagged, contemp=False)
+    else:
+        maskContemp =  np.ones((input.size, input.size))
+        np.fill_diagonal(maskContemp,0) # still make diagonal zeros
+        maskLagged = np.ones((input.size, input.size))
+
     for j in range(input.num_iterations):
-        if input.maskZero:
-            maskContemp =  sm.make_mask(matContemp, contemp=True)
-            maskLagged = sm.make_mask(matLagged, contemp=False)
-        else:
-            maskContemp =  np.ones((input.size, input.size))
-            np.fill_diagonal(maskContemp,0) # still make diagonal zeros
-            maskLagged = np.ones((input.size, input.size))
-        
         samples = sm.generate_timeseries(input.start, input.steps, input.ampContemp, matContemp, covContemp, input.ampLagged, matLagged, covLagged,measureCov)
 
         if input.clip_samples:
