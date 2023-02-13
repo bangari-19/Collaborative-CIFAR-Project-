@@ -14,6 +14,7 @@ def plot_matrix(mat):
     plt.imshow(mat)
     plt.colorbar()
 
+# separate out the contemporaneous diagonal masking
 
 def make_mask(mat, contemp):
     size = np.shape(mat)[0]
@@ -69,15 +70,16 @@ def generate_timeseries(start,len,contempamp, contempmat, contempcov, lagamp, la
 
 def clip_timeseries(timeseries, indices_to_clip, min_vec, max_vec):
 
-    for i in range(indices_to_clip):
+    ts = timeseries.copy()
+    for i in indices_to_clip:
         min = min_vec[i]
         max = max_vec[i]
         min_inds = np.where(timeseries[:,i]<min)[0]
-        timeseries[min_inds,i] = min
+        ts[min_inds,i] = min
         max_inds = np.where(timeseries[:,i]>max)[0]
-        timeseries[max_inds,i]=max
+        ts[max_inds,i]=max
 
-    return timeseries
+    return ts
     #clipping all to be within 0-5
 
     # indices = np.where(samples[:,:]<-10)[0]
