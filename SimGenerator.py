@@ -12,12 +12,12 @@ cols = 2*size
 savepath=path+'sims/numParticipants_%s/mask_%s/'%(input.num_participants,str(input.maskZero))
 try:
     os.makedirs(savepath)
+    print('making %s'%savepath)
 except:
     print('directory %s exists'%savepath)
 
 
-for number in range(input.num_participants)[0:2]:
-    
+for number in range(input.num_participants):
     csvnum = number+1
     file = path+'%i.csv'%csvnum
     data = np.loadtxt(file, skiprows=1, usecols=range(0,cols), delimiter=',')
@@ -52,5 +52,5 @@ for number in range(input.num_participants)[0:2]:
         # Checking the clipping
             samples_clip = sm.clip_timeseries(samples, input.clip_indices, input.clip_mins, input.clip_maxs)
         
-        savefile = savepath+'Person_%i_Series_t%s_covContemp%s_contempAmp%2.2f_covLagged%s_laggedAmp_%2.2f_measureCov%s_measureAmp%2.2f_iter%i.txt'%(csvnum,input.steps,input.covContempName,input.ampContemp,input.covLaggedName,input.ampLagged,input.measurecovName,input.ampMeasure,j)
+        savefile = savepath+'Person%i_Steps%s_covContemp%s_contempAmp%2.2f_covLagged%s_laggedAmp_%2.2f_measureCov%s_measureAmp%2.2f_iter%i.txt'%(csvnum,input.steps,input.covContempName,input.ampContemp,input.covLaggedName,input.ampLagged,input.measurecovName,input.ampMeasure,j)
         np.savetxt(savefile,samples, delimiter=',')
