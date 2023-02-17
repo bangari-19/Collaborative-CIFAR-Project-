@@ -54,8 +54,8 @@ def generate_timeseries(start,len,contempamp, contempmat, contempcov, lagamp, la
     #print(size,len)
     samples = np.zeros((len,size))
     samples[0,:] = start
-    lagmask = make_mask(contempmat, contemp=True)
-    contempmask = make_mask(lagmat, contemp=False)
+    lagmask = make_mask(contempmat, contemp=False)
+    contempmask = make_mask(lagmat, contemp=True)
 
     for i in range(1,len):
         
