@@ -6,14 +6,24 @@ import random
 import os
 from scipy.stats import norm
 
-def plot_matrix(mat):
+
+def plot_matrix(mat, save=False, name=None):
     import matplotlib as mpl
     import matplotlib.pyplot as plt
     mpl.rc('image', cmap='cool')
     plt.figure()
     plt.imshow(mat)
     plt.colorbar()
+    if save:
+        plt.savefig(name)
 
+
+def save_matrix(mat, name):
+    import matplotlib as mpl
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    np.savetxt(name,mat, delimiter=',')
 # separate out the contemporaneous diagonal masking
 
 def make_mask(mat, contemp):
@@ -41,11 +51,19 @@ def coeff_draw_from_cov(amplitude, mat,cov,mask):
     
     # make a draw of the covariance matrix
     stepmat = mat + sample_step  # additive rather than multiplicative to match the original simulations
-    noisy_mat = np.multiply(mask,stepmat)# mask out the relevant terms
-        
+    # plot_matrix(sample_step,True, 'sample_stepmat%2.2f.png'%amplitude)
+    # plot_matrix(mat,True, 'origmat%2.2f.png'%amplitude)
+    # plot_matrix(stepmat,True, 'stepmat%2.2f.png'%amplitude)
+    # plot_matrix(mask,True, 'mask%2.2f.png'%amplitude)
+    # noisy_mat=np.zeros((size,size))
+    # for i in range(size):
+    #     for j in range(size):
+    #         noisy_mat[i,j] = stepmat[i,j]*mask[i,j]
+    noisy_mat = np.multiply(stepmat,mask)# mask out the relevant terms
+    #plot_matrix(noisy_mat,True, 'maskedmat%2.2f.png'%amplitude)
     return noisy_mat
 
-def generate_timeseries(start,len,contempamp, contempmat, contempcov, lagamp, lagmat, lagcov, measurecov):
+def generate_timeseries(start,len,contempamp, contempmat, contempcov, lagamp, lagmat, lagcov, measurecov, save=False):
     ''' Using Y = Ylag*lagmat + Y*contempmat
     so Y= (Ylag*lagmat)*(I-contempmat)^-1
     '''
@@ -54,13 +72,20 @@ def generate_timeseries(start,len,contempamp, contempmat, contempcov, lagamp, la
     #print(size,len)
     samples = np.zeros((len,size))
     samples[0,:] = start
-    lagmask = make_mask(contempmat, contemp=False)
-    contempmask = make_mask(lagmat, contemp=True)
+    lagmask = make_mask(lagmat, contemp=False)
+    contempmask = make_mask(contempmat, contemp=True)
+
+    noisy_lagmat = coeff_draw_from_cov(lagamp, lagmat,lagcov, lagmask)
+    noisy_contempmat = coeff_draw_from_cov(contempamp, contempmat,contempcov, contempmask)
+    
+    if save:
+            save_matrix(noisy_lagmat, 'noisy_lagmat.csv')
+            plot_matrix(noisy_lagmat, True, 'noisy_lagmat.png')
+            save_matrix(noisy_contempmat, 'noisy_contempmat.csv')
+            plot_matrix(noisy_contempmat, True, 'noisy_contempmat.png')
 
     for i in range(1,len):
-        
-        noisy_lagmat = coeff_draw_from_cov(lagamp, lagmat,lagcov, lagmask)
-        noisy_contempmat = coeff_draw_from_cov(contempamp, contempmat,contempcov, contempmask)
+          
         samples[i,:] = np.matmul(np.matmul(samples[i-1,:], noisy_lagmat),np.linalg.inv(np.eye(size)-noisy_contempmat))+start
         samples[i,:]+=np.random.multivariate_normal(np.zeros(size),measurecov) # adding additional measurement noise
     

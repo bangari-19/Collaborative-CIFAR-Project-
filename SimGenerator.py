@@ -27,6 +27,11 @@ for j in range(input.num_iterations):
         matContemp = data[:,size:] #same day (contemporaneous) beta values
         matLagged = data[:,:size] #lagged beta values
         
+        # sm.save_matrix(matContemp, 'matContempOrig.csv')
+        # sm.save_matrix(matLagged, 'matLaggedOrig.csv')
+        # sm.plot_matrix(matLagged, True, 'matLaggedOrig.png')
+        # sm.plot_matrix(matContemp, True, 'matContempOrig.png')
+        
         if input.covContempName=='randn':
             covContemp = np.random.randn(size,size)
         else:
@@ -48,9 +53,10 @@ for j in range(input.num_iterations):
             np.fill_diagonal(maskContemp,0) # still make diagonal zeros
             maskLagged = np.ones((input.size, input.size))
 
-    
+        # sm.plot_matrix(maskLagged, True, 'maskLagged.png')
+        # sm.plot_matrix(maskContemp, True, 'maskContemp.png')
 
-        samples = sm.generate_timeseries(input.start, input.steps, input.ampContemp, matContemp, covContemp, input.ampLagged, matLagged, covLagged,measureCov)
+        samples = sm.generate_timeseries(input.start, input.steps, input.ampContemp, matContemp, covContemp, input.ampLagged, matLagged, covLagged,measureCov,input.save)
 
         if input.clip_samples:
         # Checking the clipping
