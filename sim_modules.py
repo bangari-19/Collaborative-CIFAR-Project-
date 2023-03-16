@@ -111,3 +111,20 @@ def clip_timeseries(timeseries, indices_to_clip, min_vec, max_vec):
     # samples[indices] = -10
     # indices = np.where(samples[:,:]>10)[0]
     # samples[indices] = 10
+def clip_outliers(timeseries, sigma, measure_amp,debug):
+
+    ts = timeseries.copy()
+
+    for i in range(np.shape(timeseries)[1]):
+        min = np.mean(timeseries[:,i])-sigma*measure_amp
+        max = np.mean(timeseries[:,i])+sigma*measure_amp
+
+        min_inds = np.where(timeseries[:,i]<min)[0]
+        ts[min_inds,i] = min
+        max_inds = np.where(timeseries[:,i]>max)[0]
+        ts[max_inds,i]=max
+
+        if debug:
+            print('mean before clip: %2.4f, mean after clip %2.4f'%(np.mean(timeseries[:,i]),np.mean(ts[:,i])))
+ 
+    return ts

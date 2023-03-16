@@ -9,19 +9,27 @@ size= input.size
 pathin= input.pathin
 pathout=input.pathout
 cols = 2*size
+print('Sim Directory is %s'%input.pathin)
 print('reading from ', input.num_participants, input.steps, input.ampContemp, input.ampLagged, input.ampMeasure, input.maskZero)
-
+printpath=pathout+'sims/numParticipants_%s'%input.num_participants
+print('Main dir is %s'%printpath)
 
 for j in range(input.num_iterations):
     savepath=pathout+'sims/numParticipants_%s/steps_%s/Contemp_%s_amp_%s/Lagged_%s_amp_%s/Measure_%s_amp_%s/mask_%s/rep_%i/'%(input.num_participants,str(input.steps),input.covContempName,str(input.ampContemp),input.covLaggedName, str(input.ampLagged),input.measurecovName, str(input.ampMeasure),str(input.maskZero),j)
     try:
         os.makedirs(savepath)
-        print('making %s'%savepath)
+        if input.debug:
+            print('making %s'%savepath)
     except:
-        print('directory %s exists'%savepath)
+        if input.debug:
+            print('directory %s exists'%savepath)
+        pass
 
     for number in range(input.num_participants):
+        
         csvnum = number+1
+        if input.debug:
+            print('Writing sims for participant %i and iteration %i'%(csvnum,j))
         file = pathin+'%i.csv'%csvnum
         data = np.loadtxt(file, skiprows=1, usecols=range(0,cols), delimiter=',')
         matContemp = data[:,size:] #same day (contemporaneous) beta values
@@ -61,6 +69,17 @@ for j in range(input.num_iterations):
         if input.clip_samples:
         # Checking the clipping
             samples_clip = sm.clip_timeseries(samples, input.clip_indices, input.clip_mins, input.clip_maxs)
+            samples=samples_clip
+            if input.debug:
+                print('saved clip')
         
+        if input.clip_outliers:
+            if input.debug:
+                print('Clipping samples')
+            samples_clip = sm.clip_outliers(samples, input.clip_sigma,input.ampMeasure, input.debug)
+            samples=samples_clip
+            if input.debug:
+                print('saved clip')
+
         savefile = savepath+'ind_%i.txt'%(csvnum)
         np.savetxt(savefile,samples, delimiter=',')
