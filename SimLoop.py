@@ -9,8 +9,8 @@ import os
 participant_vec = [100] #75, 100]
 timesteps = [200] #[50, 100, 200, 400]
 ampContempVec = [0.01]# [0.01, 0.05, 0.1 ]
-ampLaggedVec=[0.01, 0.05, 0.1]
-ampMeasureVec=[1.0] #[0.1, 0.5, 1, 1.5]
+ampLaggedVec=[0.01] #, 0.05, 0.1]
+ampMeasureVec=[0.01, 0.1, 1.0] #, 0.5, 1, 1.5]
 maskVec=[True] #, False]
 
 
@@ -23,27 +23,27 @@ for part in participant_vec:
             for ampL in ampLaggedVec:
                 for ampM in ampMeasureVec:
                     for mask in maskVec:
-                        print('writing for ', part,t,ampC,ampL,ampM,mask) 
+                        print('writing for ', part,'participants',t, 'timesteps',ampC,ampL,ampM,mask) 
                         g = open('input.py','w')
                         for line in lines:
-                            if (line.find('num_participants=100')>-1):
-                                newline=line.replace('num_participants=100', 'num_participants=%s'%part)
+                            if (line.find('num_participants = XXX')>-1):
+                                newline=line.replace('num_participants = XXX', 'num_participants=%s'%part)
                                 g.write(newline)
                                 #print(newline)
-                            elif (line.find('steps=100')>-1):
-                                newline=line.replace('steps=100','steps=%s'%t)
+                            elif (line.find('steps = XXX')>-1):
+                                newline=line.replace('steps = XXX','steps=%s'%t)
                                 g.write(newline)
                                 #print(newline)
-                            elif (line.find('ampContemp = 0.1')> -1):
-                                newline=line.replace('ampContemp = 0.1','ampContemp = %s'%str(ampC))
+                            elif (line.find('ampContemp = X')> -1):
+                                newline=line.replace('ampContemp = X','ampContemp = %s'%str(ampC))
                                 g.write(newline)
                                 #print(newline)
-                            elif (line.find('ampLagged = 0.1')>-1):
-                                newline=line.replace('ampLagged = 0.1','ampLagged = %s'%str(ampL))
+                            elif (line.find('ampLagged = X')>-1):
+                                newline=line.replace('ampLagged = X','ampLagged = %s'%str(ampL))
                                 g.write(newline)
                                 #print(newline)
-                            elif (line.find('ampMeasure = 0.1')>-1):
-                                newline=line.replace('ampMeasure = 0.1','ampMeasure = %s'%str(ampM))
+                            elif (line.find('ampMeasure = X')>-1):
+                                newline=line.replace('ampMeasure = X','ampMeasure = %s'%str(ampM))
                                 g.write(newline)
                                 #print(newline)
                             elif (line.find('maskZero=True')>-1):

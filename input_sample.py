@@ -2,19 +2,19 @@
 
 
 size=6
-pathin='/Users/reneehlozek/Code/CIFAR_Network/GIMME/220223.GIMME_matrices/'
-pathout='/Users/reneehlozek/Dropbox/CIFAR_Sims/'
-num_participants=100
-num_iterations=10
+pathin='/Users/reneehlozek/Code/CIFAR_Network/GIMME/Final Sims/F - 230328lownoise/'
+pathout='/Users/reneehlozek/Dropbox/CIFAR_Sims/reGen/F-230328lownoise/'
+num_participants = XXX  
+num_iterations = 10
 save=False
 
 # Covariance choices
 covContempName='randn'
 covLaggedName='randn'
 measurecovName='diag'
-ampContemp = 0.1
-ampLagged = 0.1
-ampMeasure = 1.0
+ampContemp = X
+ampLagged = X
+ampMeasure = X
 
 #Masking
 maskZero=True
@@ -23,7 +23,7 @@ maskZero=True
 start = [0,0,0,0,0,0]
 
 # Size of simulation
-steps=100
+steps = XXX
 
 # Are you clipping/truncating the time series
 clip_samples=False
