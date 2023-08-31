@@ -14,17 +14,44 @@ printpath=pathout+'sims/numParticipants_%s'%input.num_participants
 print('Main dir is %s'%printpath)
 
 plt.close()
-for j in range(input.num_iterations):
-    savepath=pathout+'sims/numParticipants_%s/steps_%s/Contemp_%s_amp_%s/Lagged_%s_amp_%s/Measure_%s_amp_%s/mask_%s/clipsigma_%s/rep_%i/'%(input.num_participants,str(input.steps),input.covContempName,str(input.ampContemp),input.covLaggedName, str(input.ampLagged),input.measurecovName, str(input.ampMeasure),str(input.maskZero),str(input.clip_outliers),j)
+
+savepath=pathout+'sims/numParticipants_%s/steps_%s/Contemp_%s_amp_%s/Lagged_%s_amp_%s/Measure_%s_amp_%s/mask_%s/clipsigma_%s/'%(input.num_participants,str(input.steps),input.covContempName,str(input.ampContemp),input.covLaggedName, str(input.ampLagged),input.measurecovName, str(input.ampMeasure),str(input.maskZero),str(input.clip_outliers))
+try:
+    os.makedirs(savepath)
+    if input.debug:
+        print('making %s'%savepath)
+except:
+    if input.debug:
+        print('directory %s exists'%savepath)
+    pass
+if input.clip_outliers:
+    if input.debug:
+        print('Making clip/preclip dirs')
+    savepathprecliporig=os.path.join(savepath,'preclip/')
     try:
-        os.makedirs(savepath)
-        if input.debug:
-            print('making %s'%savepath)
+        os.mkdir(savepathprecliporig)
     except:
         if input.debug:
-            print('directory %s exists'%savepath)
-        pass
+            print('preclip dir exists')
+    
+    savepathcliporig=os.path.join(savepath,'clip/')
+    try:
+        os.mkdir(savepathcliporig)
+    except:
+        if input.debug:
+            print('clip dir exists')
 
+for j in range(input.num_iterations):
+            
+    if input.debug:
+        print('making rep dirs')
+    savepathclip=os.path.join(savepathcliporig,'rep_%i/'%j)
+    savepathpreclip=os.path.join(savepathprecliporig,'rep_%i/'%j)
+    try:
+        os.mkdir(savepathclip)
+        os.mkdir(savepathpreclip)
+    except:
+        print(f'rep dir {j} exists')
     #vec = [97, 68, 6, 40, 41, 7, 69, 96, 94, 43, 5, 4, 42, 95, 91, 1, 92, 3, 45, 44, 2, 93, 122, 37, 36, 123, 121, 135, 34, 35, 134, 124, 130, 31, 131, 125, 133, 127, 32, 33, 126, 132, 103, 102, 100, 128, 15, 14, 129, 101, 105, 10, 38, 39, 11, 104, 13, 12, 75, 61, 74, 62, 63, 98, 67, 73, 9, 8, 72, 66, 99, 70, 64, 65, 71]
     for number in range(input.num_participants):
     #for number in vec:
@@ -87,12 +114,8 @@ for j in range(input.num_iterations):
         if input.clip_outliers:
             if input.debug:
                 print('Clipping samples if needed')
-            savepathpreclip=os.path.join(savepath,'preclip/')
-            try:
-                os.mkdir(savepathpreclip)
-                savefile = savepathpreclip+'ind_%i_preclip.txt'%(csvnum)
-            except:
-                savefile = savepathpreclip+'ind_%i_preclip.txt'%(csvnum)
+            
+            savefile = savepathpreclip+'ind_%i_preclip.txt'%(csvnum)
             np.savetxt(savefile,samples, delimiter=',')
             samples_clip = sm.clip_outliers(samples, input.clip_sigma,input.ampMeasure, input.debug,input.start, input.ampContemp, matContemp, covContemp, input.ampLagged, matLagged, covLagged,measureCov)
             samples=samples_clip.copy()
@@ -104,10 +127,6 @@ for j in range(input.num_iterations):
                 print('---- TEST post clip -----')
             if input.debug:
                 print('saved clip')
-        savepathclip=os.path.join(savepath,'clip/')
-        try:
-            os.mkdir(savepathclip)
             savefile = savepathclip+'ind_%i.txt'%(csvnum)
-        except:
-            savefile = savepathclip+'ind_%i.txt'%(csvnum)
+        
         np.savetxt(savefile,samples, delimiter=',')
