@@ -6,7 +6,7 @@ import os
 
 # Large scale iteration code
 
-participant_vec = [100]
+participant_vec = [150]
 timesteps = [200] #[50, 100, 200, 400]
 ampContempVec = [0.01]# [0.01, 0.05, 0.1 ]
 ampLaggedVec=[0.01] #, 0.05, 0.1]
