@@ -20,8 +20,14 @@ save_matrix <- function(mat, name) {
 
 
 make_mask <- function(mat, contemp) {
-  "If lagged then mask all zero entries 
-  If contemp then mask diagonal with zeros in addition"
+  "
+  Returns a mask for matrix; 
+  if contemp=FALSE then mask all zero entries
+  if contemp=TRUE then mask diagonal with zeros in addition
+  
+  mat: data frame
+  contemp: boolean
+  "
   size = nrow(mat)  # number of rows
   mask <- matrix(1, size, size)
   if (contemp) {
@@ -36,6 +42,14 @@ make_mask <- function(mat, contemp) {
 
 
 coeff_draw_from_cov <- function(amplitude, mat, cov, mask) {
+  "
+  Return a matrix sampled using some covariance structure 
+  
+  amplitude: numeric 
+  mat: data frame
+  cov: matrix
+  mask: matrix 
+  "
   size <- nrow(cov)
   sample_step <- cov %*% (amplitude * matrix(rnorm(size * size), nrow = size, ncol = size))
   stepmat <- mat + sample_step
@@ -44,15 +58,33 @@ coeff_draw_from_cov <- function(amplitude, mat, cov, mask) {
 }
 
 
-generate_timeseries <- function(start, len, contempamp, contempmat, contempcov, lagamp, lagmat, lagcov, measurecov, save=FALSE) {
-  size <- length(start)  # length of 'start' vector
+generate_timeseries <- function(start, len, contempamp, contempmat, contempcov, lagamp, lagmat, lagcov, measurecov, save=FALSE, debug=FALSE) {
+  "
+  Return timeseries as matrix;
+  columns represent variables (param 1, ..., param 6)
+  rows represent days 
+  
+  start: vector (represents day 1 data)
+  len: numeric (number of days)
+  contempamp: numeric 
+  contempmat: data frame
+  contempcov: matrix 
+  lagamp: numeric 
+  lagmat: data frame
+  lagcov: matrix
+  measurecov: matrix
+  save: boolean
+  debug: boolean
+  "
+  size <- length(start)  
   samples <- matrix(0, nrow = len, ncol = size)
-  samples[1,] <- start  # day 1 data (index start at 1 in R)
+  samples[1,] <- start  # index start at 1 in R
   lagmask <- make_mask(lagmat, contemp=FALSE)
   contempmask <- make_mask(contempmat, contemp=TRUE)
   
-  noisy_lagmat <- coeff_draw_from_cov(lagamp, lagmat, lagcov, lagmask)
-  noisy_contempmat <- coeff_draw_from_cov(contempamp, contempmat, contempcov, contempmask)
+  # Convert type from data.frame to matrix 
+  noisy_lagmat <- as.matrix(coeff_draw_from_cov(lagamp, lagmat, lagcov, lagmask))
+  noisy_contempmat <- as.matrix(coeff_draw_from_cov(contempamp, contempmat, contempcov, contempmask))
   
   if (save) {
     save_matrix(noisy_lagmat, 'noisy_lagmat.csv')
@@ -64,16 +96,23 @@ generate_timeseries <- function(start, len, contempamp, contempmat, contempcov, 
   if(require('mvtnorm')){}
   else {install.packages('https://cran.r-project.org/src/contrib/mvtnorm_1.2-3.tar.gz', repos = NULL, type="source",deps=TRUE)}
   library(mvtnorm)
-  # print(noisy_contempmat)
-  # print(class(solve(diag(size) - noisy_contempmat)))
-  # print(class(start))
-  # print(class(samples))
-  # print(class(as.matrix(noisy_contempmat)))
-  # print(class(noisy_lagmat))
+
     for (i in 2:len) {
-      samples[i,] <- samples[i-1,] %*% as.matrix(noisy_lagmat) %*% solve(diag(size) - as.matrix(noisy_contempmat)) + start
+      samples[i,] <- samples[i-1,] %*% as.matrix(noisy_lagmat) %*% as.matrix(solve(diag(size) - noisy_contempmat)) + start
       samples[i,] <- samples[i,] + rmvnorm(1, rep(0, size), measurecov)  
-      # rmvnorm generates one random sample from the multivar norm dist with mean 0 and covariance 'measurecov'
+      # rmvnorm generates one random sample from the multivariate normal distribution with mean 0 and covariance 'measurecov'
+      
+      if (debug) {
+        print(dim(samples[i-1,]))
+        print(dim(noisy_lagmat))
+        print(dim(diag(size) - noisy_contempmat))
+        print(noisy_contempmat)
+        print(class(solve(diag(size) - noisy_contempmat)))
+        print(class(start))
+        print(class(samples))
+        print(class(as.matrix(noisy_contempmat)))
+        print(class(noisy_lagmat))
+      }
     }
     
     samples <- samples[-1,] - start
@@ -82,7 +121,14 @@ generate_timeseries <- function(start, len, contempamp, contempmat, contempcov, 
 
 
 clip_timeseries <- function(timeseries, indices_to_clip, min_vec, max_vec) {
+  "
+  Return clipped timeseries using min_vec and max_vec as bounds for outliers 
   
+  timeseries: matrix 
+  indices_to_clip: vector 
+  min_vec: vector 
+  max_vec: vector 
+  "
   ts <- timeseries  # copy of timeseries
   
   for (i in indices_to_clip) {
@@ -101,7 +147,23 @@ clip_timeseries <- function(timeseries, indices_to_clip, min_vec, max_vec) {
 
 
 clip_outliers <- function(timeseries, sigma, measure_amp, debug, start, contempamp, contempmat, contempcov, lagamp, lagmat, lagcov, measurecov) {
+  "
+  Return clipped timeseries; 
+  find outliers in each column, replace them with new data based on sigma value
   
+  timeseries: matrix
+  sigma: numeric
+  measure_amp: numeric
+  debug: boolean 
+  start: numeric
+  contempamp: numeric
+  contempmat: data frame
+  contempcov: matrix
+  lagamp: numeric
+  lagmat: data frame
+  lagcov: matrix
+  measurecov: matrix
+  "
   ts <- timeseries
   # Iterate through all columns of timeseries
   for (i in 1:ncol(timeseries)) {
@@ -113,7 +175,7 @@ clip_outliers <- function(timeseries, sigma, measure_amp, debug, start, contempa
       cat("bad vals min", timeseries[min_inds, i], "inds", min_inds, "\n")
     }
     
-    countmax <- 2
+    countmax <- 2  # Number of replacement attempts for outliers
     # Loop over the min outlier indices
     for (minind in min_inds) {
       count <- 0
