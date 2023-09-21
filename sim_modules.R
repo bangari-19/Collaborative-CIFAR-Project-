@@ -98,19 +98,31 @@ generate_timeseries <- function(start, len, contempamp, contempmat, contempcov, 
   library(mvtnorm)
 
     for (i in 2:len) {
-      samples[i,] <- samples[i-1,] %*% as.matrix(noisy_lagmat) %*% as.matrix(solve(diag(size) - noisy_contempmat)) + start
+      samples[i,] <- samples[i-1,] %*% as.matrix(noisy_lagmat) %*% as.matrix(solve(diag(size) - as.matrix(noisy_contempmat))) + start
       samples[i,] <- samples[i,] + rmvnorm(1, rep(0, size), measurecov)  
       # rmvnorm generates one random sample from the multivariate normal distribution with mean 0 and covariance 'measurecov'
       
       if (debug) {
-        print(dim(samples[i-1,]))
+        cat('Day:', i, '\n')
+        cat('sample[i, ]', '\n')
+        print(samples[i, ])
+        cat('length(samples[i-1, ]):', '\n')
+        print(length(samples[i-1,]))
+        cat('dim of noisy_lagmat:', '\n')
         print(dim(noisy_lagmat))
+        cat('dimension of (identity - noisy_contempmat): ', '\n')
         print(dim(diag(size) - noisy_contempmat))
+        cat('noisy_contempmat:', '\n')
         print(noisy_contempmat)
-        print(class(solve(diag(size) - noisy_contempmat)))
+        cat('class of (identity - noisy_contempmat):', '\n')
+        print(class((solve(diag(size) - noisy_contempmat))))
+        cat('class of start', '\n')
         print(class(start))
+        cat('class of samples', '\n')
         print(class(samples))
+        cat('class of noisy_contempmat', '\n')
         print(class(as.matrix(noisy_contempmat)))
+        cat('class of noisy_lagmat', '\n')
         print(class(noisy_lagmat))
       }
     }
@@ -178,45 +190,52 @@ clip_outliers <- function(timeseries, sigma, measure_amp, debug, start, contempa
     countmax <- 2  # Number of replacement attempts for outliers
     # Loop over the min outlier indices
     for (minind in min_inds) {
-      count <- 0
-      tmp <- generate_timeseries(ts[minind - 1, ], 3, contempamp, contempmat, contempcov, lagamp, lagmat, lagcov, measurecov, save = FALSE)[1]
-      
-      if (debug) {
-        cat("param", i, tmp[i], "tmp[i]", "min =", min_val, "count", count, "minind", minind, "\n")
-      }
-      
-      # Generate new timeseries for that outlier index until outlier within bound or count > countmax
-      while (ts[minind, i] < min_val && count < countmax) {
+      # Check if minind is within bounds
+      if (minind >= 2 && minind <= (nrow(ts) - 2)) {
+        count <- 0
         tmp <- generate_timeseries(ts[minind - 1, ], 3, contempamp, contempmat, contempcov, lagamp, lagmat, lagcov, measurecov, save = FALSE)[1]
         
         if (debug) {
-          cat("iteration", count, "for param", i, "and ind", minind, "in min", "\n")
-          print(ts[minind - 1:minind + 2, i])
-          cat("param", i, "before", "\n")
+          cat("param", i, tmp[i], "tmp[i]", "min =", min_val, "count", count, "minind", minind, "\n")
         }
         
-        # Update the value in ts
-        ts[minind, i] <- tmp[i]
-        count <- count + 1
-        
-        if (debug) {
-          print(ts[minind - 1:minind + 2, i])
-          cat("after", count, countmax, "\n")
-          cat("-----\n")
-        }
-        
-        if (count == (countmax - 1)) {
-          ts[minind, i] <- min_val * (1 - 0.01 * runif(1))
+        # Generate new timeseries for that outlier index until outlier within bound or count > countmax
+        while (ts[minind, i] < min_val && count < countmax) {
+          tmp <- generate_timeseries(ts[minind - 1, ], 3, contempamp, contempmat, contempcov, lagamp, lagmat, lagcov, measurecov, save = FALSE)[1]
+          
           if (debug) {
-            cat(ts[minind, i], "failing due to count", "\n")
+            cat("iteration", count, "for param", i, "and ind", minind, "in min", "\n")
+            print(ts[minind - 1:minind + 2, i])
+            cat("param", i, "before", "\n")
+          }
+          
+          # Update the value in ts
+          ts[minind, i] <- tmp[i]
+          count <- count + 1
+          
+          if (debug) {
+            print(ts[minind - 1:minind + 2, i])
+            cat("after", count, countmax, "\n")
+            cat("-----\n")
+          }
+          
+          if (count == (countmax - 1)) {
+            ts[minind, i] <- min_val * (1 - 0.01 * runif(1))
+            if (debug) {
+              cat(ts[minind, i], "failing due to count", "\n")
+            }
           }
         }
-      }
-      
-      if (debug) {
-        cat("while loop complete", "\n")
-        cat(ts[minind, i], "new value for param", i, "\n")
-        cat("=======\n")
+        
+        if (debug) {
+          cat("while loop complete", "\n")
+          cat(ts[minind, i], "new value for param", i, "\n")
+          cat("=======\n")
+        }
+      } else {
+        if (debug) {
+          cat("minind out of bounds:", minind, "\n")
+        }
       }
     }
     
@@ -227,43 +246,50 @@ clip_outliers <- function(timeseries, sigma, measure_amp, debug, start, contempa
     }
     
     for (maxind in max_inds) {
-      count <- 0
-      tmp <- generate_timeseries(ts[maxind - 1, ], 3, contempamp, contempmat, contempcov, lagamp, lagmat, lagcov, measurecov, save = FALSE)[1]
-      
-      if (debug) {
-        cat("param", i, tmp[i], "tmp[i]", "max =", max_val, "count =", count, "maxind", maxind, "\n")
-      }
-      
-      while (ts[maxind, i] > max_val && count < countmax) {
+      # Check if maxind is within bounds
+      if (maxind >= 2 && maxind <= (nrow(ts) - 2)) {
+        count <- 0
+        tmp <- generate_timeseries(ts[maxind - 1, ], 3, contempamp, contempmat, contempcov, lagamp, lagmat, lagcov, measurecov, save = FALSE)[1]
         
         if (debug) {
-          cat("iteration", count, "for param", i, "and ind", maxind, "in max", "\n")
-          print(ts[maxind - 1:maxind + 2, i])
-          cat("ts before", "\n")
-          cat(tmp[i], "tmp[i]", "max =", max_val, "count =", count, "\n")
+          cat("param", i, tmp[i], "tmp[i]", "max =", max_val, "count =", count, "maxind", maxind, "\n")
         }
         
-        ts[maxind, i] <- tmp[i]
-        count <- count + 1
-        
-        if (debug) {
-          print(ts[maxind - 1:maxind + 2, i])
-          cat("after", count, countmax, "\n")
-          cat("-----\n")
-        }
-        
-        if (count == (countmax - 1)) {
-          ts[maxind, i] <- max_val * (1 - 0.01 * runif(1))  
+        while (ts[maxind, i] > max_val && count < countmax) {
+          
           if (debug) {
-            cat(ts[maxind, i], "failing due to count", "\n")
+            cat("iteration", count, "for param", i, "and ind", maxind, "in max", "\n")
+            print(ts[maxind - 1:maxind + 2, i])
+            cat("ts before", "\n")
+            cat(tmp[i], "tmp[i]", "max =", max_val, "count =", count, "\n")
+          }
+          
+          ts[maxind, i] <- tmp[i]
+          count <- count + 1
+          
+          if (debug) {
+            print(ts[maxind - 1:maxind + 2, i])
+            cat("after", count, countmax, "\n")
+            cat("-----\n")
+          }
+          
+          if (count == (countmax - 1)) {
+            ts[maxind, i] <- max_val * (1 - 0.01 * runif(1))
+            if (debug) {
+              cat(ts[maxind, i], "failing due to count", "\n")
+            }
           }
         }
-      }
-      
-      if (debug) {
-        cat("while loop complete", "\n")
-        cat(ts[maxind, i], "new value for param", i, "\n")
-        cat("=======\n")
+        
+        if (debug) {
+          cat("while loop complete", "\n")
+          cat(ts[maxind, i], "new value for param", i, "\n")
+          cat("=======\n")
+        }
+      } else {
+        if (debug) {
+          cat("maxind out of bounds:", maxind, "\n")
+        }
       }
     }
     

@@ -31,11 +31,16 @@ clip_maxs <- c(0.8,1.3)
 # clipping outliers
 clip_sigma = 2
 
-ts = generate_timeseries(start, steps, ampContemp, matContemp, covContemp, ampLagged, matLagged, covLagged, covMeasure, debug=TRUE)
+for (i in 0:50) {
+  ts_clipped = clip_outliers(ts, clip_sigma, ampMeasure, debug=T, start, ampContemp, matContemp, covContemp, ampLagged, matLagged, covLagged, covMeasure)
+  ts_clipped
+}
+
+ts = generate_timeseries(start, steps, ampContemp, matContemp, covContemp, ampLagged, matLagged, covLagged, covMeasure, debug=F)
 ts
 plot(ts, xlab = "time [days]", ylab = "value", main = 'original timeseries')
 
-ts_clipped = clip_outliers(ts, clip_sigma, ampMeasure, debug=TRUE, start, ampContemp, matContemp, covContemp, ampLagged, matLagged, covLagged, covMeasure)
+ts_clipped = clip_outliers(ts, clip_sigma, ampMeasure, debug=T, start, ampContemp, matContemp, covContemp, ampLagged, matLagged, covLagged, covMeasure)
 ts_clipped
 plot(ts_clipped, xlab = "time [days]", ylab = "value", main = 'clipped timeseries')
 
@@ -59,8 +64,11 @@ df <- data.frame(
 )
 
 ggplot(df, aes(x = days)) +
-  geom_line(aes(y = original), color = "blue", linetype = "solid") +
-  geom_line(aes(y = clipped), color = "red", linetype = "dashed") +
+  geom_line(aes(y = original, color = "Original"), linetype = "solid") +
+  geom_line(aes(y = clipped, color = "Clipped"), linetype = "dashed") +
   xlab("time [days]") +
   ylab("value") +
-  ggtitle("original vs. clipped timeseries")
+  ggtitle("original vs. clipped timeseries") +
+  scale_color_manual(values = c(Original = "blue", Clipped = "red")) +
+  scale_linetype_manual(values = c(Original = "solid", Clipped = "dashed")) +
+  labs(color = "Timeseries")
