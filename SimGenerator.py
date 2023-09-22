@@ -60,7 +60,7 @@ for j in range(input.num_iterations):
      #   csvnum = number
         if input.debug:
             print('Writing sims for participant %i and sim iteration %i'%(csvnum,j))
-        file = pathin+'ind_%i.csv'%csvnum
+        file = pathin+'%i.csv'%csvnum
         data = np.loadtxt(file, skiprows=1, usecols=range(0,cols), delimiter=',')
         matContemp = data[:,size:] #same day (contemporaneous) beta values
         matLagged = data[:,:size] #lagged beta values

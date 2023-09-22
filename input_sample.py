@@ -2,9 +2,9 @@
 
 
 size=6
-pathin='/Users/reneehlozek/Dropbox/CIFAR_Sims/081823_groupmatrices/'
+pathin='/Users/reneehlozek/Dropbox/CIFAR_Sims/230919.GIMMEmatricesH/'
 #/Users/reneehlozek/Code/CIFAR_Network/GIMME/Final Sims/F - 230328lownoise/'
-pathout='/Users/reneehlozek/Dropbox/CIFAR_Sims/081823_groupmatrices_sims/'
+pathout='/Users/reneehlozek/Dropbox/CIFAR_Sims/230919.GIMMEmatricesH_sims/'
 num_participants = XXX  
 num_iterations = 100
 save=False
