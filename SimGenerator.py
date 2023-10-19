@@ -60,7 +60,7 @@ for j in range(input.num_iterations):
      #   csvnum = number
         if input.debug:
             print('Writing sims for participant %i and sim iteration %i'%(csvnum,j))
-        file = pathin+'%i.csv'%csvnum
+        file = pathin+'ind_%i.csv'%csvnum
         data = np.loadtxt(file, skiprows=1, usecols=range(0,cols), delimiter=',')
         matContemp = data[:,size:] #same day (contemporaneous) beta values
         matLagged = data[:,:size] #lagged beta values
@@ -86,12 +86,17 @@ for j in range(input.num_iterations):
         if input.maskZero:
             maskContemp =  sm.make_mask(matContemp, contemp=True)
             maskLagged = sm.make_mask(matLagged, contemp=False)
+            #sm.plot_matrix(maskLagged, True, 'maskLagged_before.png')
+            maskLaggedDiag = np.eye(input.size)
+            maskLagged=maskLagged*maskLaggedDiag
+            #sm.plot_matrix(maskLagged, True, 'maskLagged_after.png')
         else:
             maskContemp =  np.ones((input.size, input.size))
             np.fill_diagonal(maskContemp,0) # still make diagonal zeros
             maskLagged = np.ones((input.size, input.size))
 
-        # sm.plot_matrix(maskLagged, True, 'maskLagged.png')
+            
+        #sm.plot_matrix(maskLagged, True, 'maskLagged.png')
         # sm.plot_matrix(maskContemp, True, 'maskContemp.png')
         plt.close()
         samples = sm.generate_timeseries(input.start, input.steps, input.ampContemp, matContemp, covContemp, input.ampLagged, matLagged, covLagged,measureCov,input.save)
