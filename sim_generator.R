@@ -175,7 +175,7 @@ for (j in 1:num_iterations) {
         cat('saved clip\n')
       }
     
-      savefile <- file.path(savepathclip, paste0('ind_', csvnum, '.txt'))
+      savefile <- file.path(savepathclip, paste0('ind_', num_participants, '.txt'))
     }
     
     write.table(samples, file = savefile, sep = ',', row.names = FALSE, col.names = FALSE)
