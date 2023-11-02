@@ -10,6 +10,24 @@ size <- size
 pathin <- pathin
 pathout <- pathout
 cols <- 2 * size
+steps <- steps 
+num_participants <- num_participants
+num_iterations <- num_iterations
+save <- FALSE
+covContempName <- covContempName
+covLaggedName <- covLaggedName
+measurecovName <- measurecovName
+ampContemp <- ampContemp
+ampLagged <- ampLagged
+ampMeasure <- ampMeasure
+maskZero <- maskZero
+clipSamples <- clipSamples
+clipIndices <- clipIndices
+clipMins <- clipMins
+clipMaxs <- clipMaxs
+clipOutliers <- clipOutliers
+clipSigma <- clipSigma
+
 print(paste("Sim Directory is", pathin))
 print(paste("reading from", num_participants, "participants", steps, "timesteps", ampContemp, ampLagged, ampMeasure, maskZero))
 printpath <- file.path(pathout, "sims", paste0("numParticipants_", num_participants))
@@ -18,39 +36,27 @@ print(paste("Main dir is", printpath))
 #dev.off()
 
 # Make directory for sims
+# Example: /Users/mac/Desktop/CIFAR/220429.FinalMatrices_sims/sims/numParticipants_15/steps_10/Contemp_randn_amp_0.1/Lagged_randn_amp_0.1/Measure_diag_amp_1/Mask_TRUE/clipsigma_3
+
 savepath <- file.path(pathout, "sims")
 savepath <- file.path(savepath, paste0("numParticipants_", num_participants))
-savepath <- file.path(savepath, "steps_10")
-savepath <- file.path(savepath, paste0("Contemp_randn_amp_0.01"))
-savepath <- file.path(savepath, paste0("Lagged_randn_amp_0.01"))
-savepath <- file.path(savepath, paste0("Measure_diag_amp_1"))
-savepath <- file.path(savepath, "mask_TRUE")
-savepath <- file.path(savepath, "clipsigma_TRUE")
+savepath <- file.path(savepath, paste0("steps_", steps))
+savepath <- file.path(savepath, paste0("Contemp_", covContempName, "_amp_", ampContemp))
+savepath <- file.path(savepath, paste0("Lagged_", covLaggedName, "_amp_", ampLagged))
+savepath <- file.path(savepath, paste0("Measure_", measurecovName, "_amp_", ampMeasure))
+savepath <- file.path(savepath, paste0("Mask_", maskZero))
+savepath <- file.path(savepath, paste0("clipsigma_", clipSigma))
 cat("Save path is", savepath, "\n")
 
-# savepath <- paste0(
-#   pathout, 
-#   "/sims/numParticipants_", num_participants,
-#   "/steps_", steps,
-#   "/Contemp_", covContempName, "_amp_", ampContemp,
-#   "/Lagged_", covLaggedName, "_amp_", ampLagged,
-#   "/Measure_", measurecovName, "_amp_", ampMeasure,
-#   "/mask_", maskZero, "/clipsigma_", clip_outliers
-# )
-
-# savepath <- file.path(
-#   pathout, 
-#   paste0("sims/numParticipants_", num_participants),
-#   "steps_", steps, 
-#   "Contemp_", covContempName, 
-#   "_amp_", ampContemp,
-#   "Lagged_", covLaggedName, 
-#   "_amp_", ampLagged,
-#   "Measure_", measurecovName, 
-#   "_amp_", ampMeasure,
-#   "mask_", maskZero, 
-#   "clipsigma_", clip_outliers
-# )
+# savepath <- file.path(pathout, "sims")
+# savepath <- file.path(savepath, paste0("numParticipants_", num_participants))
+# savepath <- file.path(savepath, "steps_10")
+# savepath <- file.path(savepath, paste0("Contemp_randn_amp_0.01"))
+# savepath <- file.path(savepath, paste0("Lagged_randn_amp_0.01"))
+# savepath <- file.path(savepath, paste0("Measure_diag_amp_1"))
+# savepath <- file.path(savepath, "mask_TRUE")
+# savepath <- file.path(savepath, "clipsigma_TRUE")
+# cat("Save path is", savepath, "\n")
 
 # Make directories if they do not exist
 if (!dir.exists(savepath)) {
@@ -84,12 +90,11 @@ for (j in 1:num_iterations) {
   
   # Loop over participants
   for (number in 1:num_participants) {
-    csvnum <- number + 1
-    
     if (debug) {
       cat("Writing sims for participant", csvnum, "and sim iteration", j, "\n")
     }
     
+    # Load in input contemp and lagged coeff matrix data
     file <- file.path(pathin, paste0(csvnum, ".csv"))
     data <- read.csv(file, header = TRUE, sep = ",")
     matContemp <- as.matrix(data[, (size + 1):cols])
@@ -120,10 +125,9 @@ for (j in 1:num_iterations) {
     maskLagged <- ifelse(maskZero, make_mask(matLagged, contemp = FALSE), matrix(1, nrow = size, ncol = size))
     
     # Generate timeseries data
-    samples <- generate_timeseries(
-      start, steps, ampContemp, matContemp, covContemp,
-      ampLagged, matLagged, covLagged, measureCov, save
-    )
+    samples <- generate_timeseries(start, steps, ampContemp, matContemp, covContemp,ampLagged, matLagged, covLagged, measureCov, save)
+    print(number)
+    print(samples)
     
     max_clip_threshold <- sqrt(diag(measureCov)[1]) * 3
     
@@ -137,7 +141,7 @@ for (j in 1:num_iterations) {
     }
     
     # Clip time series data if specified
-    if (clip_samples) {
+    if (clipSamples) {
       # Checking the clipping
       samples_clip <- clip_timeseries(samples, clip_indices, clip_mins, clip_maxs)
       samples <- samples_clip
@@ -170,7 +174,7 @@ for (j in 1:num_iterations) {
         cat("---- TEST post clip -----\n")
         cat('saved clip\n')
       }
-      
+    
       savefile <- file.path(savepathclip, paste0('ind_', csvnum, '.txt'))
     }
     
