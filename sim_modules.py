@@ -47,22 +47,33 @@ def coeff_draw_from_cov(amplitude, mat,cov,mask):
     import numpy as np
     import matplotlib.pyplot as plt
     size=len(cov)
+
+    plotmat=False
+    # noRand=True # are we adding random noise to matrices
+    
+    # if noRand:
+    #     ## If making the coefficient matrix the same as the one given by the sims team:
+    #     sample_step = 0*np.matmul(cov,np.dot(amplitude,np.random.randn(size,size))) 
+    # else:
     sample_step = np.matmul(cov,np.dot(amplitude,np.random.randn(size,size))) 
+
     # generate a sample of the coefficient matrix based on the structure. 
-    # Should reproduce the R notebook perfectly if cov is uniform 1
     
     # make a draw of the covariance matrix
     stepmat = mat + sample_step  # additive rather than multiplicative to match the original simulations
-    # plot_matrix(sample_step,True, 'sample_stepmat%2.2f.png'%amplitude)
-    # plot_matrix(mat,True, 'origmat%2.2f.png'%amplitude)
-    # plot_matrix(stepmat,True, 'stepmat%2.2f.png'%amplitude)
+    #plot_matrix(sample_step,True, 'sample_stepmat%2.2f.png'%amplitude)
+    
+    if plotmat:
+        plot_matrix(mat,True, 'origmat%2.2f.png'%amplitude)
+        plot_matrix(stepmat,True, 'stepmat%2.2f.png'%amplitude)
     # plot_matrix(mask,True, 'mask%2.2f.png'%amplitude)
     # noisy_mat=np.zeros((size,size))
     # for i in range(size):
     #     for j in range(size):
     #         noisy_mat[i,j] = stepmat[i,j]*mask[i,j]
     noisy_mat = np.multiply(stepmat,mask)# mask out the relevant terms
-    #plot_matrix(noisy_mat,True, 'maskedmat%2.2f.png'%amplitude)
+    if plotmat:
+        plot_matrix(noisy_mat,True, 'maskedmat%2.2f.png'%amplitude)
     return noisy_mat
 
 def generate_timeseries(start,len,contempamp, contempmat, contempcov, lagamp, lagmat, lagcov, measurecov, save=False):

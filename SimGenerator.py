@@ -86,10 +86,13 @@ for j in range(input.num_iterations):
         if input.maskZero:
             maskContemp =  sm.make_mask(matContemp, contemp=True)
             maskLagged = sm.make_mask(matLagged, contemp=False)
+
+            ## If assuming only diagonal lagged entries
             #sm.plot_matrix(maskLagged, True, 'maskLagged_before.png')
-            maskLaggedDiag = np.eye(input.size)
-            maskLagged=maskLagged*maskLaggedDiag
+            #maskLaggedDiag = np.eye(input.size)
+            #maskLagged=maskLagged*maskLaggedDiag
             #sm.plot_matrix(maskLagged, True, 'maskLagged_after.png')
+
         else:
             maskContemp =  np.ones((input.size, input.size))
             np.fill_diagonal(maskContemp,0) # still make diagonal zeros

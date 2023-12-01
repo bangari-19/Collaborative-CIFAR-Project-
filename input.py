@@ -2,9 +2,9 @@
 
 
 size=6
-pathin='/Users/reneehlozek/Dropbox/CIFAR_Sims/230919.GIMMEmatricesH_GROUP/'
+pathin='/Users/reneehlozek/Dropbox/CIFAR_Sims/230919.GIMMEmatricesG_GROUP/'
 #/Users/reneehlozek/Code/CIFAR_Network/GIMME/Final Sims/F - 230328lownoise/'
-pathout='/Users/reneehlozek/Dropbox/CIFAR_Sims/230919.GIMMEmatricesH_GROUP_sims_DiagLag/'
+pathout='/Users/reneehlozek/Dropbox/CIFAR_Sims/230919.GIMMEmatricesG_GROUP_sims_noRand/'
 num_participants=150  
 num_iterations = 100
 save=False
@@ -13,8 +13,8 @@ save=False
 covContempName='randn'
 covLaggedName='randn'
 measurecovName='diag'
-ampContemp = 0.01
-ampLagged = 0.01
+ampContemp = 0.0
+ampLagged = 0.0
 ampMeasure = 1.0
 
 #Masking
