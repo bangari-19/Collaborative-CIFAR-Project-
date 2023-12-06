@@ -5,7 +5,7 @@ library(TSstudio)
 library(readr)
 
 # import modules 
-source("~/CIFAR/sim_modules.R")
+source("~/ShinyApp/CIFAR/sim_modules.R")
 
 # Define UI 
 ui <- fluidPage(
@@ -19,10 +19,44 @@ ui <- fluidPage(
                            "text/comma-separated-values,
                        .csv")),
       
+      numericInput(inputId = 'size',
+                   label = 'Number of variables',
+                   value = 6),  # Default value
+      
+      numericInput(inputId = 'steps',
+                   label = 'Number of time steps',
+                   value = 100),  
+      
+      numericInput(inputId = 'ampContemp', 
+                   label = 'Amplitude of contemp matrix',
+                   value = 1),  
+      
+      numericInput(inputId = 'ampLagged', 
+                   label = 'Amplitude of lagged matrix',
+                   value = 1),  
+      
+      numericInput(inputId = 'ampMeasure', 
+                   label = 'Measure amplitude',
+                   value = 1),
+      
+      selectInput(inputId = 'covContempName',
+                  label = 'Select contemp covariance type',
+                  choices = list('random' = 1, 'heterogeneous' = 2, 'compound' = 3), selected = 1),
+      
+      selectInput(inputId = 'covLaggedName',
+                  label = 'Select lagged covariance type',
+                  choices = list('random' = 1, 'heterogeneous' = 2, 'compound' = 3), selected = 1),
+      
+      selectInput(inputId = 'mask',
+                  label = 'Apply mask',
+                  choices = list('Yes' = 1, 'No' = 2), selected = 1),
+      
       actionButton(inputId = "analyze", label = "Analyze CSV file")
     ),
     
     mainPanel(
+      
+      h1("Plotted Data"),
       
       plotOutput(outputId = "plot"),
       
@@ -59,25 +93,28 @@ server <- function(input, output, session) {
   })
   
   # load in contemp and lagged matrices
-  observeEvent(input$analyze, function() {
+  observeEvent(input$analyze, {
     data <- data_input()
-    size = 6
+    size <- input$size
     start <- rep(0, size)
-    steps = 100
-    start_index = size+1
-    stop = length(data)
+    steps <- input$steps
+    start_index <- size+1
+    stop <- ncol(data)
     matContemp <- data[, start_index:stop]
     matLagged <- data[, 1:size]
 
   # covariances
     covContemp <- matrix(rnorm(size**2), nrow=size, ncol=size)
     covLagged <- matrix(rnorm(size**2), nrow=size, ncol=size)
-    ampContemp = 0.1
-    ampLagged = 0.1
-    ampMeasure = 1.0
-    measureCov <- ampMeasure * diag(size)
+    ampContemp = input$ampContemp
+    ampLagged = input$ampLagged
+    ampMeasure = input$ampMeasure
+    covMeasure <- ampMeasure * diag(size)
+    covContempName <- input$covContempName
+    covLaggedName <- input$covLaggedName
 
     # masks
+    mask <- input$mask
     maskContemp =  make_mask(matContemp, contemp=T)
     maskLagged = make_mask(matLagged, contemp=F)
   
@@ -88,10 +125,6 @@ server <- function(input, output, session) {
   
     # clipping outliers
     clip_sigma = 2
-  
-    for (i in 0:50) {
-      ts_clipped = clip_outliers(ts, clip_sigma, ampMeasure, debug=T, start, ampContemp, matContemp, covContemp, ampLagged, matLagged, covLagged, covMeasure)
-    }
   
     ts = generate_timeseries(start, steps, ampContemp, matContemp, covContemp, ampLagged, matLagged, covLagged, covMeasure, debug=F)
   
