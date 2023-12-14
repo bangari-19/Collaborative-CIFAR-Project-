@@ -37,7 +37,6 @@ print(paste("Main dir is", printpath))
 
 # Make directory for sims
 # Example: /Users/mac/Desktop/CIFAR/220429.FinalMatrices_sims/sims/numParticipants_15/steps_10/Contemp_randn_amp_0.1/Lagged_randn_amp_0.1/Measure_diag_amp_1/Mask_TRUE/clipsigma_3
-
 savepath <- file.path(pathout, "sims")
 savepath <- file.path(savepath, paste0("numParticipants_", num_participants))
 savepath <- file.path(savepath, paste0("steps_", steps))
@@ -48,15 +47,6 @@ savepath <- file.path(savepath, paste0("Mask_", maskZero))
 savepath <- file.path(savepath, paste0("clipsigma_", clipSigma))
 cat("Save path is", savepath, "\n")
 
-# savepath <- file.path(pathout, "sims")
-# savepath <- file.path(savepath, paste0("numParticipants_", num_participants))
-# savepath <- file.path(savepath, "steps_10")
-# savepath <- file.path(savepath, paste0("Contemp_randn_amp_0.01"))
-# savepath <- file.path(savepath, paste0("Lagged_randn_amp_0.01"))
-# savepath <- file.path(savepath, paste0("Measure_diag_amp_1"))
-# savepath <- file.path(savepath, "mask_TRUE")
-# savepath <- file.path(savepath, "clipsigma_TRUE")
-# cat("Save path is", savepath, "\n")
 
 # Make directories if they do not exist
 if (!dir.exists(savepath)) {
@@ -91,11 +81,11 @@ for (j in 1:num_iterations) {
   # Loop over participants
   for (number in 1:num_participants) {
     if (debug) {
-      cat("Writing sims for participant", csvnum, "and sim iteration", j, "\n")
+      cat("Writing sims for participant", number, "and sim iteration", j, "\n")
     }
     
     # Load in input contemp and lagged coeff matrix data
-    file <- file.path(pathin, paste0(csvnum, ".csv"))
+    file <- file.path(pathin, paste0(number, ".csv"))
     data <- read.csv(file, header = TRUE, sep = ",")
     matContemp <- as.matrix(data[, (size + 1):cols])
     matLagged <- as.matrix(data[, 1:size])
@@ -126,8 +116,8 @@ for (j in 1:num_iterations) {
     
     # Generate timeseries data
     samples <- generate_timeseries(start, steps, ampContemp, matContemp, covContemp,ampLagged, matLagged, covLagged, measureCov, save)
-    print(number)
-    print(samples)
+    #print(number)
+    #print(samples)
     
     max_clip_threshold <- sqrt(diag(measureCov)[1]) * 3
     
@@ -155,7 +145,7 @@ for (j in 1:num_iterations) {
         cat('Clipping samples if needed\n')
       }
       
-      savefile <- file.path(savepathpreclip, paste0('ind_', csvnum, '_preclip.txt'))
+      savefile <- file.path(savepathpreclip, paste0('ind_', number, '_preclip.txt'))
       write.table(samples, file = savefile, sep = ',', row.names = FALSE, col.names = FALSE)
       
       samples_clip <- clip_outliers(
@@ -175,7 +165,7 @@ for (j in 1:num_iterations) {
         cat('saved clip\n')
       }
     
-      savefile <- file.path(savepathclip, paste0('ind_', num_participants, '.txt'))
+      savefile <- file.path(savepathclip, paste0('ind_', number, '.txt'))
     }
     
     write.table(samples, file = savefile, sep = ',', row.names = FALSE, col.names = FALSE)
