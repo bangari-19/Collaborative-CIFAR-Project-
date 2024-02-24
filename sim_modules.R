@@ -1,37 +1,51 @@
-# SIM_MODULES
+# Script for simulation modules used to generate timeseries data and clip it
 
 plot_matrix <- function(mat, save=FALSE, name=NULL) {
+  # Plots a matrix using plot.matrix library and optionally saves the plot to a file.
+  # 
+  # Args:
+  #   mat: Matrix to be plotted.
+  #   save: Logical indicating whether to save the plot.
+  #   name: Filename for saving the plot, required if save is TRUE.
+  
   if(require('plot.matrix')){}
   else {install.packages('https://cran.r-project.org/src/contrib/plot.matrix_1.6.2.tar.gz',repos = NULL, type="source",deps=TRUE)}
 
   library(plot.matrix)
   plot(mat)
+  
   if (save) {
-    plot(mat)  # create plot
-    png(file = name)  # save plot as png
-    dev.off()  # close plot 
+    png(file = name)  
+    dev.off()   
   }
 }
 
 
 save_matrix <- function(mat, name) {
+  "Saves a matrix to a CSV file.
+
+  Args:
+    mat: Matrix to be saved.
+    name: Filename for the saved CSV."
+  
   write.csv(mat, file = name)
 }
 
 
 make_mask <- function(mat, contemp) {
-  "
-  Returns a mask for matrix; 
-  if contemp=FALSE then mask all zero entries
-  if contemp=TRUE then mask diagonal with zeros in addition
+  "Generates a mask for a matrix. Zeros in the original matrix and optionally the diagonal are masked.
+
+  Args:
+    mat: Matrix for which to generate the mask.
+    contemp: Logical indicating whether to also mask the diagonal.
+
+  Returns:
+    A mask matrix with the same dimensions as 'mat'."
   
-  mat: data frame
-  contemp: boolean
-  "
-  size = nrow(mat)  # number of rows
+  size = nrow(mat)  
   mask <- matrix(1, size, size)
   if (contemp) {
-    diag(mask) <- 0  # fill diagonal of mask with zeros
+    diag(mask) <- 0  
   }
   
   inds = which(mat == 0, arr.ind = T)  # find indices where mat == 0 in (row, col) format
@@ -42,14 +56,17 @@ make_mask <- function(mat, contemp) {
 
 
 coeff_draw_from_cov <- function(amplitude, mat, cov, mask) {
-  "
-  Return a matrix sampled using some covariance structure 
+  "Samples a new matrix using a given covariance structure, amplitude, and mask.
+
+  Args:
+    amplitude: Scaling factor for the covariance-based sample.
+    mat: Base matrix to which the sampled changes are applied.
+    cov: Covariance matrix used for sampling.
+    mask: Mask matrix to apply to the sampled matrix.
+
+  Returns:
+    A matrix representing the noisy version of 'mat' after applying the sampled changes and mask."
   
-  amplitude: numeric 
-  mat: data frame
-  cov: matrix
-  mask: matrix 
-  "
   size <- nrow(cov)
   sample_step <- cov %*% (amplitude * matrix(rnorm(size * size), nrow = size, ncol = size))
   stepmat <- mat + sample_step
@@ -59,23 +76,26 @@ coeff_draw_from_cov <- function(amplitude, mat, cov, mask) {
 
 
 generate_timeseries <- function(start, len, contempamp, contempmat, contempcov, lagamp, lagmat, lagcov, measurecov, save=FALSE, debug=FALSE) {
-  "
-  Return timeseries as matrix;
-  columns represent variables (param 1, ..., param 6)
-  rows represent days 
+  "Generates a time series matrix based on initial values, amplitude factors, and covariance structures.
+  The function simulates the evolution of a set of variables over time, considering both contemporary
+  and lagged influences, and can optionally save intermediate results and plots for analysis.
+
+  Args:
+    start: Numeric vector of initial values for the time series variables.
+    len: Integer specifying the length of the time series (number of time points).
+    contempamp: Numeric, amplitude factor for contemporary effects.
+    contempmat: Matrix/Data frame, specifies the contemporary relationships between variables.
+    contempcov: Matrix, covariance structure for contemporary effects.
+    lagamp: Numeric, amplitude factor for lagged effects.
+    lagmat: Matrix/Data frame, specifies the lagged relationships between variables.
+    lagcov: Matrix, covariance structure for lagged effects.
+    measurecov: Matrix, measurement error covariance structure.
+    save: Logical, if TRUE, saves intermediate matrices and plots to files.
+    debug: Logical, if TRUE, prints debug information during the simulation.
+
+  Returns:
+    A matrix representing the time series of variables over the specified time period."
   
-  start: vector (represents day 1 data)
-  len: numeric (number of days)
-  contempamp: numeric 
-  contempmat: data frame
-  contempcov: matrix 
-  lagamp: numeric 
-  lagmat: data frame
-  lagcov: matrix
-  measurecov: matrix
-  save: boolean
-  debug: boolean
-  "
   size <- length(start)  
   samples <- matrix(0, nrow = len, ncol = size)
   samples[1,] <- start  # index start at 1 in R
@@ -103,27 +123,17 @@ generate_timeseries <- function(start, len, contempamp, contempmat, contempcov, 
       # rmvnorm generates one random sample from the multivariate normal distribution with mean 0 and covariance 'measurecov'
       
       if (debug) {
-        cat('Day:', i, '\n')
-        cat('sample[i, ]', '\n')
-        print(samples[i, ])
-        cat('length(samples[i-1, ]):', '\n')
-        print(length(samples[i-1,]))
-        cat('dim of noisy_lagmat:', '\n')
-        print(dim(noisy_lagmat))
-        cat('dimension of (identity - noisy_contempmat): ', '\n')
-        print(dim(diag(size) - noisy_contempmat))
-        cat('noisy_contempmat:', '\n')
-        print(noisy_contempmat)
-        cat('class of (identity - noisy_contempmat):', '\n')
-        print(class((solve(diag(size) - noisy_contempmat))))
-        cat('class of start', '\n')
-        print(class(start))
-        cat('class of samples', '\n')
-        print(class(samples))
-        cat('class of noisy_contempmat', '\n')
-        print(class(as.matrix(noisy_contempmat)))
-        cat('class of noisy_lagmat', '\n')
-        print(class(noisy_lagmat))
+        cat(sprintf("Day: %d\n", i))
+        cat("sample[i, ]:\n"); print(samples[i, ])
+        cat(sprintf("length(samples[i-1, ]): %d\n", length(samples[i-1,])))
+        cat(sprintf("dim of noisy_lagmat: %s\n", toString(dim(noisy_lagmat))))
+        cat(sprintf("dimension of (identity - noisy_contempmat): %s\n", toString(dim(diag(size) - noisy_contempmat))))
+        cat("noisy_contempmat:\n"); print(noisy_contempmat)
+        cat(sprintf("class of (identity - noisy_contempmat): %s\n", class(solve(diag(size) - noisy_contempmat))))
+        cat(sprintf("class of start: %s\n", class(start)))
+        cat(sprintf("class of samples: %s\n", class(samples)))
+        cat(sprintf("class of noisy_contempmat: %s\n", class(as.matrix(noisy_contempmat))))
+        cat(sprintf("class of noisy_lagmat: %s\n", class(noisy_lagmat)))
       }
     }
     
@@ -133,14 +143,17 @@ generate_timeseries <- function(start, len, contempamp, contempmat, contempcov, 
 
 
 clip_timeseries <- function(timeseries, indices_to_clip, min_vec, max_vec) {
-  "
-  Return clipped timeseries using min_vec and max_vec as bounds for outliers 
+  "Clips values in the time series that are outside the bounds defined by min_vec and max_vec.
+
+  Args:
+    timeseries: Matrix representing the time series data.
+    indices_to_clip: Indices of columns in the time series to check for clipping.
+    min_vec: Vector of minimum allowable values for each column.
+    max_vec: Vector of maximum allowable values for each column.
+
+  Returns:
+    A matrix with the same dimensions as 'timeseries', with outliers clipped."
   
-  timeseries: matrix 
-  indices_to_clip: vector 
-  min_vec: vector 
-  max_vec: vector 
-  "
   ts <- timeseries  # copy of timeseries
   
   for (i in indices_to_clip) {
@@ -159,23 +172,27 @@ clip_timeseries <- function(timeseries, indices_to_clip, min_vec, max_vec) {
 
 
 clip_outliers <- function(timeseries, sigma, measure_amp, debug, start, contempamp, contempmat, contempcov, lagamp, lagmat, lagcov, measurecov) {
-  "
-  Return clipped timeseries; 
-  find outliers in each column, replace them with new data based on sigma value
+  "Clips outliers in a time series matrix by replacing outlying values based on a specified sigma threshold.
+  Outliers are identified in each column of the time series and replaced with new data generated considering
+  the sigma value and the underlying time series model parameters.
+
+  Args:
+    timeseries: Matrix representing the time series data.
+    sigma: Numeric threshold for identifying outliers based on standard deviation.
+    measure_amp: Numeric, amplitude factor for measurement errors.
+    debug: Logical, if TRUE, enables printing of debug information.
+    start: Numeric vector of initial values for the time series.
+    contempamp: Numeric, amplitude factor for contemporary effects.
+    contempmat: Matrix/Data frame specifying contemporary relationships between variables.
+    contempcov: Matrix, covariance structure for contemporary effects.
+    lagamp: Numeric, amplitude factor for lagged effects.
+    lagmat: Matrix/Data frame specifying the lagged relationships between variables.
+    lagcov: Matrix, covariance structure for lagged effects.
+    measurecov: Matrix, covariance structure for measurement errors.
+
+  Returns:
+    A matrix representing the clipped time series, with outliers adjusted based on the specified criteria."
   
-  timeseries: matrix
-  sigma: numeric
-  measure_amp: numeric
-  debug: boolean 
-  start: numeric
-  contempamp: numeric
-  contempmat: data frame
-  contempcov: matrix
-  lagamp: numeric
-  lagmat: data frame
-  lagcov: matrix
-  measurecov: matrix
-  "
   ts <- timeseries
   # Iterate through all columns of timeseries
   for (i in 1:ncol(timeseries)) {
@@ -304,3 +321,31 @@ clip_outliers <- function(timeseries, sigma, measure_amp, debug, start, contempa
   
   return(ts)
 }
+
+
+
+# --------------------------TEST FOR ONE INDIVIDUAL------------------------------- #
+data <- read.csv("~/Desktop/CIFAR/220429.FinalMatrices/1.csv")
+size = 6
+start <- rep(0, size)
+steps = 10
+start_index = size+1
+stop = length(data)
+matContemp <- data[, start_index:stop]
+matLagged <- data[, 1:size]
+covContemp <- matrix(rnorm(size**2), nrow=size, ncol=size)
+covLagged <- matrix(rnorm(size**2), nrow=size, ncol=size)
+ampContemp = 0.1
+ampLagged = 0.1
+ampMeasure = 1.0
+measureCov <- ampMeasure * diag(size)
+maskContemp =  make_mask(matContemp, contemp=T)
+maskLagged = make_mask(matLagged, contemp=F)
+clip_indices <- c(0,1)
+clip_mins <- c(0.5, 0.7)
+clip_maxs <- c(0.8,1.3)
+clip_sigma = 2  # smaller clip_sigma --> more clipping 
+
+ts = generate_timeseries(start, steps, ampContemp, matContemp, covContemp, ampLagged, matLagged, covLagged, covMeasure, debug=F)
+ts_clipoutliers = clip_outliers(ts, clip_sigma, ampMeasure, debug=F, start, ampContemp, matContemp, covContemp, ampLagged, matLagged, covLagged, covMeasure)
+ts == ts_clipoutliers 
