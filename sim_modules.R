@@ -328,7 +328,7 @@ clip_outliers <- function(timeseries, sigma, measure_amp, debug, start, contempa
 data <- read.csv("~/Desktop/CIFAR/220429.FinalMatrices/1.csv")
 size = 6
 start <- rep(0, size)
-steps = 10
+steps = 100
 start_index = size+1
 stop = length(data)
 matContemp <- data[, start_index:stop]
@@ -347,5 +347,27 @@ clip_maxs <- c(0.8,1.3)
 clip_sigma = 2  # smaller clip_sigma --> more clipping 
 
 ts = generate_timeseries(start, steps, ampContemp, matContemp, covContemp, ampLagged, matLagged, covLagged, covMeasure, debug=F)
-ts_clipoutliers = clip_outliers(ts, clip_sigma, ampMeasure, debug=F, start, ampContemp, matContemp, covContemp, ampLagged, matLagged, covLagged, covMeasure)
-ts == ts_clipoutliers 
+ts_clipped = clip_outliers(ts, clip_sigma, ampMeasure, debug=F, start, ampContemp, matContemp, covContemp, ampLagged, matLagged, covLagged, covMeasure)
+
+library(ggplot2)
+#samples = generate_timeseries(start, steps, ampContemp, matContemp, covContemp, ampLagged, matLagged, covLagged, measureCov, save=F)
+#data=as.data.frame(samples)
+
+#plot(samples[,1], type='l')
+
+df <- data.frame(
+  days = 1:(steps-1),
+  original = ts[, 1],  # only param 1
+  clipped = ts_clipped[, 1]
+)
+
+ggplot(df, aes(x = days)) +
+  geom_line(aes(y = original, color = "Original"), linetype = "solid") +
+  geom_line(aes(y = clipped, color = "Clipped"), linetype = "dashed") +
+  xlab("time [days]") +
+  ylab("value") +
+  ggtitle("Original vs. Clipped Timeseries") +
+  scale_color_manual(values = c(Original = "blue", Clipped = "red")) +
+  scale_linetype_manual(values = c(Original = "solid", Clipped = "dashed")) +
+  labs(color = "Timeseries") +
+  theme_minimal()
