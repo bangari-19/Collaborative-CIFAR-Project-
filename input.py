@@ -4,9 +4,9 @@
 size=6
 pathin='/Users/reneehlozek/Dropbox/CIFAR_Sims/230919.GIMMEmatricesG_GROUP/'
 #/Users/reneehlozek/Code/CIFAR_Network/GIMME/Final Sims/F - 230328lownoise/'
-pathout='/Users/reneehlozek/Dropbox/CIFAR_Sims/230919.GIMMEmatricesG_GROUP_sims_noRand/'
-num_participants=150  
-num_iterations = 100
+pathout='/Users/reneehlozek/Dropbox/CIFAR_Sims/230919.GIMMEmatricesG_GROUP_sims_noRand_clip20/'
+num_participants=1  
+num_iterations = 1
 save=False
 
 # Covariance choices
@@ -24,7 +24,7 @@ maskZero = True
 start = [0,0,0,0,0,0]
 
 # Size of simulation
-steps=200
+steps=100
 
 # Are you clipping/truncating the time series
 clip_samples=False
@@ -33,6 +33,6 @@ clip_mins=[0.5, 0.7]
 clip_maxs=[0.8,1.3]
 
 clip_outliers=True
-clip_sigma=3
+clip_sigma=20
 
 debug=False

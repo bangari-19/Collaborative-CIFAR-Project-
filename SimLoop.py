@@ -3,11 +3,13 @@ import numpy as np
 import matplotlib.pyplot  as plt
 import sys
 import os
+import random
 
+random.seed(1230)
 # Large scale iteration code
 
-participant_vec = [150]
-timesteps = [200] #[50, 100, 200, 400]
+participant_vec = [1]
+timesteps = [100] #[50, 100, 200, 400]
 ampContempVec = [0.0]# [0.01, 0.05, 0.1 ]
 ampLaggedVec=[0.0] #, 0.05, 0.1]
 ampMeasureVec=[1.0] #, 0.5, 1, 1.5]

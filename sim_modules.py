@@ -83,7 +83,7 @@ def generate_timeseries(start,len,contempamp, contempmat, contempcov, lagamp, la
     import numpy as np
     size=np.shape(start)[0]
     #print(size,len)
-    samples = np.zeros((len,size))
+    samples = np.zeros((len+100,size))
     samples[0,:] = start
     lagmask = make_mask(lagmat, contemp=False)
     contempmask = make_mask(contempmat, contemp=True)
@@ -98,12 +98,12 @@ def generate_timeseries(start,len,contempamp, contempmat, contempcov, lagamp, la
             plot_matrix(noisy_contempmat, True, 'noisy_contempmat.png')
 
     #debug=True
-    for i in range(1,len):
+    for i in range(1,len+100):
         samples[i,:] = np.matmul(np.matmul(samples[i-1,:], noisy_lagmat),np.linalg.inv(np.eye(size)-noisy_contempmat))+start
         samples[i,:]+= np.random.multivariate_normal(np.zeros(size),measurecov) # adding additional measurement noise
     
     samples-=start
-    samples=samples[1:,:]
+    samples=samples[101:,:]
     return samples
 
 def clip_timeseries(timeseries, indices_to_clip, min_vec, max_vec):

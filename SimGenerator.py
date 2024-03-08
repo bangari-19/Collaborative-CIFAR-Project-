@@ -4,6 +4,9 @@ import matplotlib.pyplot  as plt
 import sys 
 import input as input 
 import os
+import random
+
+random.seed(1230)
 size= input.size
 pathin= input.pathin
 pathout=input.pathout
