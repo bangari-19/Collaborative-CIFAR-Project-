@@ -5,6 +5,7 @@ library(TSstudio)
 library(readr)
 library(plotly)
 library(dplyr)
+library(tidyr)
 
 # import modules 
 source("sim_modules.R")
@@ -37,8 +38,15 @@ ui <- fluidPage(title="Demo",
                     
                     h1("Plotted Data"),
                     
-                    plotOutput(outputId = "plot"),
+                    plotOutput(outputId = "plot1",
+                               dblclick = "plot1_dblclick",
+                               brush = brushOpts(
+                                 id = "plot1_brush",
+                                 resetOnNew = TRUE),
+                    ),
                     
+                    plotOutput(outputId = "plot2"),
+                             
                     downloadButton(
                       outputId = "download_plot",
                       label = "Download Plot Image"
@@ -154,7 +162,7 @@ server <- function(input, output, session) {
     data <- filedata()
     size <- input$size
     start <- rep(0, size)
-    steps <- input$steps
+    steps <- 10
     start_index <- size+1
     stop <- ncol(data)
     matContemp <- data[, start_index:stop]
@@ -183,19 +191,12 @@ server <- function(input, output, session) {
     # clipping outliers
     clip_sigma = 2
     
-    ts = generate_timeseries(start, steps, ampContemp, matContemp, covContemp, ampLagged, matLagged, covLagged, covMeasure, debug=F)
+    ts <- generate_timeseries(start, steps, ampContemp, matContemp, covContemp, ampLagged, matLagged, covLagged, covMeasure, debug=F)
     
-    ts_clipped = clip_outliers(ts, clip_sigma, ampMeasure, debug=T, start, ampContemp, matContemp, covContemp, ampLagged, matLagged, covLagged, covMeasure)
-    
-    # current thought process: we have separated the columns of ts and clipped into parameters 
-    # now need to work on making the check box appear AFTER file is uploaded and we know how many variables 
-    # then allow checking boxing specific parameters and them showing on the plot
-    # https://stackoverflow.com/questions/67595612/shiny-app-which-uploads-a-datafile-and-create-a-checkbox-and-textinput-and-dropd
+    ts_clipped <- clip_outliers(ts, clip_sigma, ampMeasure, debug=T, start, ampContemp, matContemp, covContemp, ampLagged, matLagged, covLagged, covMeasure)
     
     output$variables <- renderUI({
-      df <- filedata()
-      if (is.null(df)) return(NULL)
-      items = names(df)
+      items = names(as.data.frame(ts))
       names(items) = items
       checkboxGroupInput(inputId = "variables",
                          label = "Choose variables you want shown on plot", 
@@ -203,31 +204,61 @@ server <- function(input, output, session) {
                          selected = items)
     })
     
-    plotInputs = numeric(length(input$variables))
-    for (i in 1:length(input$variables)) {
-      plotInputs[i] <- function() {
-        df <- data.frame(
-          days = 1:(steps-1),
-          ts[, i],
-          ts_clipped[, i]
-        )
-        p <- ggplot(df, aes(x = days)) +
-          geom_line(aes(y = ts), linetype = "solid") +
-          geom_line(aes(y = ts_clipped), linetype = "dashed") +
-          xlab("time [days]") +
-          ylab("value") +
-          ggtitle("original vs. clipped timeseries") +
-          labs(color = "Timeseries")
-      }
-      i = i + 1
-    }
-
     
-    output$plot <- renderPlot({
-      for (input in plotInputs) {
-        print(input())
+    plotInput1 <- function() {
+      data <- data.frame(days=1:(steps-1),
+                         gather(select(as.data.frame(ts), input$variables), variable_o, value_o),
+                         gather(select(as.data.frame(ts_clipped), input$variables), variable_c, value_c)
+      )
+      p <- ggplot(data, aes(x=days)) +
+        geom_line(aes(y = value_o, color = variable_o, linetype = "Original")) +
+        geom_line(aes(y = value_c, color = variable_c, linetype = "Clipped")) +
+        xlab("time [days]") +
+        ylab("value") +
+        scale_linetype_manual(values = c(Original = "solid", Clipped = "dashed")) +
+        labs(color = "Timeseries")
+    }
+    
+    plotInput2 <- function() {
+      data <- data.frame(days=1:(steps-1),
+                         gather(select(as.data.frame(ts), input$variables), variable_o, value_o),
+                         gather(select(as.data.frame(ts_clipped), input$variables), variable_c, value_c)
+      )
+    p <- ggplot(data, aes(x=days)) +
+      geom_line(aes(y = value_o, color = variable_o, linetype = "Original")) +
+      geom_line(aes(y = value_c, color = variable_c, linetype = "Clipped")) +
+      xlab("time [days]") +
+      ylab("value") +
+      scale_linetype_manual(values = c(Original = "solid", Clipped = "dashed")) +
+      labs(color = "Timeseries") +
+      coord_cartesian(xlim = ranges2$x, ylim = ranges2$y, expand = FALSE)
+    }
+    
+    output$plot1 <- renderPlot({
+      validate(need(!is.null(input$variables), 'Please tick a box to show a plot.'))
+      print(plotInput1())
+    })
+    
+    output$plot2 <- renderPlot({
+      print(plotInput2())
+    })
+    
+    # https://stackoverflow.com/questions/70391083/shiny-double-click-zoom-plot-interaction-not-working-properly
+    
+    ranges2 <- reactiveValues(x = NULL, y = NULL)
+
+    observe({
+      brush <- input$plot2_brush
+      if (!is.null(brush)) {
+        ranges2$x <- c(brush$xmin, brush$xmax)
+        ranges2$y <- c(brush$ymin, brush$ymax)
+        
+      } else {
+        ranges2$x <- NULL
+        ranges2$y <- NULL
       }
     })
+    
     
     output$download_plot <- downloadHandler(
       filename = "plot.png",
