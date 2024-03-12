@@ -103,7 +103,7 @@ server <- function(input, output, session) {
     if (is.null(df)) return(NULL)
     numericInput(inputId = 'ampContemp', 
                  label = 'Amplitude of contemp matrix',
-                 value = 1)  
+                 value = 0.1)  
   })
   
   output$ampLagged <- renderUI({
@@ -111,7 +111,7 @@ server <- function(input, output, session) {
     if (is.null(df)) return(NULL)
     numericInput(inputId = 'ampLagged', 
                  label = 'Amplitude of lagged matrix',
-                 value = 1)
+                 value = 0.1)
   })
   
   output$ampMeasure <- renderUI({
@@ -119,7 +119,7 @@ server <- function(input, output, session) {
     if (is.null(df)) return(NULL)
     numericInput(inputId = 'ampMeasure', 
                  label = 'Measure amplitude',
-                 value = 1)
+                 value = 1.0)
   })
   
   output$covContempName <- renderUI({
@@ -162,19 +162,19 @@ server <- function(input, output, session) {
     data <- filedata()
     size <- input$size
     start <- rep(0, size)
-    steps <- 10
+    steps <- 100
     start_index <- size+1
-    stop <- ncol(data)
+    stop <- length(data)
     matContemp <- data[, start_index:stop]
     matLagged <- data[, 1:size]
     
     # covariances
     covContemp <- matrix(rnorm(size**2), nrow=size, ncol=size)
     covLagged <- matrix(rnorm(size**2), nrow=size, ncol=size)
-    ampContemp = input$ampContemp
-    ampLagged = input$ampLagged
-    ampMeasure = input$ampMeasure
-    covMeasure <- ampMeasure * diag(size)
+    ampContemp = 0.1 # input$ampContemp
+    ampLagged = 0.1 # input$ampLagged
+    ampMeasure = 1.0 #input$ampMeasure
+    measureCov <- ampMeasure * diag(size)
     covContempName <- input$covContempName
     covLaggedName <- input$covLaggedName
     
@@ -191,9 +191,9 @@ server <- function(input, output, session) {
     # clipping outliers
     clip_sigma = 2
     
-    ts <- generate_timeseries(start, steps, ampContemp, matContemp, covContemp, ampLagged, matLagged, covLagged, covMeasure, debug=F)
+    ts <- generate_timeseries(start, steps, ampContemp, matContemp, covContemp, ampLagged, matLagged, covLagged, measureCov, debug=F)
     
-    ts_clipped <- clip_outliers(ts, clip_sigma, ampMeasure, debug=T, start, ampContemp, matContemp, covContemp, ampLagged, matLagged, covLagged, covMeasure)
+    ts_clipped <- clip_outliers(ts, clip_sigma, ampMeasure, debug=T, start, ampContemp, matContemp, covContemp, ampLagged, matLagged, covLagged, measureCov)
     
     output$variables <- renderUI({
       items = names(as.data.frame(ts))
@@ -204,6 +204,10 @@ server <- function(input, output, session) {
                          selected = items)
     })
     
+    data <- data.frame(days=1:(steps-1),
+                       gather(select(as.data.frame(ts), input$variables), variable_o, value_o),
+                       gather(select(as.data.frame(ts_clipped), input$variables), variable_c, value_c)
+    )
     
     plotInput1 <- function() {
       data <- data.frame(days=1:(steps-1),
@@ -263,7 +267,7 @@ server <- function(input, output, session) {
     output$download_plot <- downloadHandler(
       filename = "plot.png",
       content = function(file) {
-        ggsave(file, plotInput())
+        ggsave(file, plotInput1())
       }
     )
     
