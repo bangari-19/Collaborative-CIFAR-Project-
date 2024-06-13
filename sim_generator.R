@@ -1,3 +1,5 @@
+# Script to generate and store simulated pre-clipped and clipped timeseries data for all individuals 
+
 # Set working directory
 setwd("/Users/mac/Desktop/CIFAR/R code")
 
@@ -11,6 +13,7 @@ pathin <- pathin
 pathout <- pathout
 cols <- 2 * size
 steps <- steps 
+print(steps)
 num_participants <- num_participants
 num_iterations <- num_iterations
 save <- FALSE
@@ -69,6 +72,9 @@ if (clipOutliers) {
 
 # Loop over iterations
 for (j in 1:num_iterations) {
+  # Set unique seed for each iteration to control randomness 
+  set.seed(123 + j) 
+  
   if (debug) {
     cat("making rep dirs\n")
   }
@@ -116,8 +122,8 @@ for (j in 1:num_iterations) {
     
     # Generate timeseries data
     samples <- generate_timeseries(start, steps, ampContemp, matContemp, covContemp,ampLagged, matLagged, covLagged, measureCov, save)
-    #print(number)
-    #print(samples)
+    # print(nrow(samples))
+    # print(ncol(samples))
     
     max_clip_threshold <- sqrt(diag(measureCov)[1]) * 3
     
@@ -171,3 +177,5 @@ for (j in 1:num_iterations) {
     write.table(samples, file = savefile, sep = ',', row.names = FALSE, col.names = FALSE)
   }
 }
+
+
