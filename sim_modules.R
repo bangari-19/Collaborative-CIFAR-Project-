@@ -1,4 +1,4 @@
-# Script for simulation modules used to generate timeseries data and clip it
+set.seed(10)
 
 plot_matrix <- function(mat, save=FALSE, name=NULL) {
   # Plots a matrix using plot.matrix library and optionally saves the plot to a file.
@@ -137,7 +137,7 @@ generate_timeseries <- function(start, len, contempamp, contempmat, contempcov, 
       }
     }
     
-    samples <- samples[-1,] - start
+    samples <- samples[-1,] - start  # Remove first row of samples and subtract 'start' from all rows
     return(samples)
 }
 
@@ -335,8 +335,8 @@ matContemp <- data[, start_index:stop]
 matLagged <- data[, 1:size]
 covContemp <- matrix(rnorm(size**2), nrow=size, ncol=size)
 covLagged <- matrix(rnorm(size**2), nrow=size, ncol=size)
-ampContemp = 0.1
-ampLagged = 0.1
+ampContemp = 0.01
+ampLagged = 0.01
 ampMeasure = 1.0
 measureCov <- ampMeasure * diag(size)
 maskContemp =  make_mask(matContemp, contemp=T)
@@ -344,7 +344,7 @@ maskLagged = make_mask(matLagged, contemp=F)
 clip_indices <- c(0,1)
 clip_mins <- c(0.5, 0.7)
 clip_maxs <- c(0.8,1.3)
-clip_sigma = 2  # smaller clip_sigma --> more clipping 
+clip_sigma = 3  # smaller clip_sigma --> more clipping
 
 ts = generate_timeseries(start, steps, ampContemp, matContemp, covContemp, ampLagged, matLagged, covLagged, covMeasure, debug=F)
 ts_clipped = clip_outliers(ts, clip_sigma, ampMeasure, debug=F, start, ampContemp, matContemp, covContemp, ampLagged, matLagged, covLagged, covMeasure)
