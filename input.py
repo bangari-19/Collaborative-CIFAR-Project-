@@ -2,19 +2,18 @@
 
 
 size=6
-pathin='/Users/reneehlozek/Dropbox/CIFAR_Sims/230919.GIMMEmatricesG_GROUP/'
-#/Users/reneehlozek/Code/CIFAR_Network/GIMME/Final Sims/F - 230328lownoise/'
-pathout='/Users/reneehlozek/Dropbox/CIFAR_Sims/230919.GIMMEmatricesG_GROUP_sims_noRand_clip20/'
+pathin='/Users/reneehlozek/Dropbox/CIFAR_Sims/240415/true_nonoise/t_100_ar_0.6_rep_1/'
+pathout='/Users/reneehlozek/Dropbox/CIFAR_Sims/240415/pythonsims_t_100_ar_0.6_rep_1/'
 num_participants=1  
 num_iterations = 1
-save=False
+save=True
 
 # Covariance choices
 covContempName='randn'
 covLaggedName='randn'
 measurecovName='diag'
-ampContemp = 0.0
-ampLagged = 0.0
+ampContemp = 0.01
+ampLagged = 0.01
 ampMeasure = 1.0
 
 #Masking

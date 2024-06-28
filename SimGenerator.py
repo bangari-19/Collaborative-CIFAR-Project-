@@ -70,8 +70,8 @@ for j in range(input.num_iterations):
         
         # sm.save_matrix(matContemp, 'matContempOrig.csv')
         # sm.save_matrix(matLagged, 'matLaggedOrig.csv')
-        # sm.plot_matrix(matLagged, True, 'matLaggedOrig.png')
-        # sm.plot_matrix(matContemp, True, 'matContempOrig.png')
+        sm.plot_matrix(matLagged, True, 'matLaggedOrig.png')
+        sm.plot_matrix(matContemp, True, 'matContempOrig.png')
         
         if input.covContempName=='randn':
             covContemp = np.random.randn(size,size)
@@ -102,7 +102,7 @@ for j in range(input.num_iterations):
             maskLagged = np.ones((input.size, input.size))
 
             
-        #sm.plot_matrix(maskLagged, True, 'maskLagged.png')
+        # sm.plot_matrix(maskLagged, True, 'maskLagged.png')
         # sm.plot_matrix(maskContemp, True, 'maskContemp.png')
         plt.close()
         samples = sm.generate_timeseries(input.start, input.steps, input.ampContemp, matContemp, covContemp, input.ampLagged, matLagged, covLagged,measureCov,input.save)

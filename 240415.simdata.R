@@ -1,7 +1,11 @@
-
-
 #230222: AR=.6; Contemp = .35; lagged = .45, noise=.01
 rm(list=ls())
+install.packages('SyncRNG')
+library(SyncRNG)
+s <- SyncRNG(seed=123456)
+for (i in 1:10) {
+  cat(s$randi(), '\n')
+}
 
 #######################################################
 #### 1. load functions needed to simulate the data ####
@@ -26,13 +30,10 @@ convert_to_arr_ind_format <- function(row, col, matrix_dim) {
 
 check_reverse_offdiagonal <- function(mat){
 regen <- FALSE
-# print('checking mat')
-# print(mat)
-# print(mat[1,0])
   for (i in 1:nrow(mat)) {
     for (j in 1:i) {
       if ((j!=i) && (mat[i, j] != 0.0) && (mat[j, i] != 0.0)) {
-        cat('i=', i, ', j=', j, ', matij=', mat[i, j], ', matji=', mat[j, i], ', we must regenerate \n')
+        #cat('i=', i, ', j=', j, ', matij=', mat[i, j], ', matji=', mat[j, i], ', we must regenerate \n')
         regen <- TRUE
         break
       }
@@ -73,7 +74,6 @@ mat.generate.asw <- function(p.con,nvar,AR,dens,p.group,con.b,lag.b){
     pos.all <- 2*(nrow(A)*ncol(A))                    ###list all available (non-ar) spots (You could add - 2*nrow(A) to remove AR spots (see AW code))
     cnt.all <- dens*p.group*pos.all                   ###number of group paths given density and proportion of group paths
     indices <- which(Phi == 0, arr.ind = TRUE)        ###create data frame that lists all combinations of columns/rows in matrices. Run "indices <- indices[which(indices[,1] != indices[,2]), ]" to kick out diagonal
-    #row.col<-c(17, 24, 31, 28)                        ###select group-level associations
     row.col<-c(17, 24, 31, 28)                        ###select group-level associations in lagged
     diag.set<-c(8, 22, 36)                            ###select AR paths 
     n.p.1<-row.col[1:round(p.con*length(row.col))]    ###identify contemporaneous group paths 
@@ -114,15 +114,17 @@ mat.generate.asw <- function(p.con,nvar,AR,dens,p.group,con.b,lag.b){
 #adds noise, and simulates the time series (unnecessary for our purposes but helpful for checks!)
 ts.generate.asw <- function (mat, lvl, t,dens,p.group,con.b,lag.b,p.con) {
   repeat {
-    
+    set.seed(10)
     repeat{
+      set.seed(10)
       v <- ncol(mat)/2                                                                             ###calculate number of variables in matrix
       Phi <- mat[, 1:v]                                                                             ###pull out Phi
       A <- mat[, (v+1):(v*2)]                                                                       ###pull out A
       A_ind <- matrix(0, ncol=v, nrow=v)                                                            ###set A indices to zero
       #A[3,5]<-A[5,3]
       group_A_reverse <-check_reverse_offdiagonal(A)
-      if(group_A_reverse) {print('something is wrong with your group level contem paths')
+      if(group_A_reverse) {
+      print('something is wrong with your group level contem paths')
       print(huh)}
       indices.A <- which(A==0,arr.ind=T) 
 
@@ -133,8 +135,8 @@ ts.generate.asw <- function (mat, lvl, t,dens,p.group,con.b,lag.b,p.con) {
       # Now check if there are reverse paths at the group level
 
       group_phi_reverse <-check_reverse_offdiagonal(Phi)
-      if(group_phi_reverse) {print('something is wrong with your group level lagged paths')
-      print(huh)}
+      if(group_phi_reverse) {print('something is wrong with your group level lagged paths')}
+      
       indices.Phi <- which(Phi==0,arr.ind=T)
 
       # Actually do the reverse of what we did before. 
@@ -149,6 +151,7 @@ ts.generate.asw <- function (mat, lvl, t,dens,p.group,con.b,lag.b,p.con) {
 
       rand<-sample(c(round(cnt.all/2),(round(cnt.all)-round(cnt.all/2))),size=2,replace=TRUE)   
          ###randomly select row/col combinations for individual-level paths
+
          # The key here is that we want to remove paths that have group level 
          # now check for the reverse/off-diagonal symmetric ones, and regenerate if found
         # print('group level A')
@@ -158,6 +161,7 @@ ts.generate.asw <- function (mat, lvl, t,dens,p.group,con.b,lag.b,p.con) {
         
         row.col.A      <- sample(1:nrow(indices.A), rand[1], replace = F) 
         row.col.Phi      <- sample(1:nrow(indices.Phi), rand[2], replace = F)
+
         Phi[indices.Phi[row.col.Phi,]] <- lag.b                                                       ###set betas for lagged paths
         A[indices.A[row.col.A,]]     <- con.b                                                         ###set betas for contemporaneous paths
         # print('group + individ level A')
@@ -174,6 +178,7 @@ ts.generate.asw <- function (mat, lvl, t,dens,p.group,con.b,lag.b,p.con) {
         # print('-----')
         # break
         # break
+
         regen <-check_reverse_offdiagonal(A)
 
         while (regen==TRUE){
@@ -195,47 +200,17 @@ ts.generate.asw <- function (mat, lvl, t,dens,p.group,con.b,lag.b,p.con) {
           regen <-check_reverse_offdiagonal(Phi)
         }
 
-        # print('after checks')
-        # print(A)
-        # print('A')
-        # print(Phi)
-        # print('Phi')
-        # print('-----')
-        # print(huh)
+
 
       # 1. No random individual paths where groups exist (for AR or not)
       # 2. We want to avoid reverse direction paths in individuals/groups (reverse triangle null) 
 
-     ## OLD CODE FOR CLEANUP
-      # # Checking for individual paths that are the reverse 
-      # resultPhi <- check_symmetric_indices(Phi)
-      # resultA <- check_symmetric_indices(A)
-
-      # #for (val in row.col.A) { if (val %in% grp.diag) { print("its already in grp")} }
-      # #for (val in row.col.A) { if (val %in% grp.diag) { print("its already in grp")} }
-
-      # while (resultPhi$nonzeroels >0) {
-      #   row.col.Phi      <- sample(1:nrow(indices.Phi), rand[2], replace = F)
-      #   resultPhi <- check_symmetric_indices(Phi)
-      #   Phi<-resultPhi$mat
-      # }
-
-      # while (resultA$nonzeroels >0) {
-      #   row.col.A      <- sample(1:nrow(indices.A), rand[1], replace = F)
-      #   resultA <- check_symmetric_indices(A)
-      #   A<-resultA$mat
-      # }
-
-
-      # Still missing is the piece where I actually check not for reverse paths, but check for individual level in
-      # group level paths, but _maybe_ that's ok?
+      nonoisepaths  <- cbind(Phi, A) ### bind Phi and A before adding noise to them to check
 
       noise.inds      <- which(A != 0, arr.ind = TRUE)                                              ####add noise to A betas, SD =.1
       A[noise.inds]   <- A[noise.inds] + rnorm(n = nrow(noise.inds), mean = 0, sd = .01)
       noise.inds      <- which(Phi != 0, arr.ind = TRUE)                                            ###add noise to Phi betas, SD =.1
       Phi[noise.inds] <- Phi[noise.inds] + rnorm(n = nrow(noise.inds), mean = 0, sd = .01)
-
-
       break
     }
     
@@ -260,6 +235,7 @@ ts.generate.asw <- function (mat, lvl, t,dens,p.group,con.b,lag.b,p.con) {
   
   list   <- list("series"  = series,
                  "paths"   = paths,
+                 "nonoisepaths" = nonoisepaths,
                  "levels"  = lvl)
   return(list)
 }
@@ -271,8 +247,8 @@ ts.generate.asw <- function (mat, lvl, t,dens,p.group,con.b,lag.b,p.con) {
 
 # enter simulation parameters
 v             <- c(6) # Number of variables
-n             <- c(10) # number of individuals
-t             <- c(50) # Number of time points
+n             <- c(100) # number of individuals
+t             <- c(100) # Number of time points
 rep           <- seq(1) # replications per condition 
 ar            <-c(.6) # ar paths to try
 conditions    <- expand.grid(t, n, v, ar,rep)
@@ -296,12 +272,15 @@ all$ar         <- as.numeric(as.character(all$ar))
 
 # name directories to place simulated data in (Change)
 dir.create('/Users/reneehlozek/Dropbox/CIFAR_Sims/240415')
+
 data.path <- '/Users/reneehlozek/Dropbox/CIFAR_Sims/240415/data'
 true.path <- '/Users/reneehlozek/Dropbox/CIFAR_Sims/240415/true'
+nonoisetrue.path <- '/Users/reneehlozek/Dropbox/CIFAR_Sims/240415/true_nonoise'
 level.path <- '/Users/reneehlozek/Dropbox/CIFAR_Sims/240415/levels'
 
 dir.create(data.path)
 dir.create(true.path)
+dir.create(nonoisetrue.path)
 dir.create(level.path)
 
 # Creates actual folders for each iteration
@@ -311,6 +290,8 @@ for (i in 1:nrow(all)){
   dir.create(data)
   true <- file.path(true.path, folders[i])
   dir.create(true)
+  nonoisetrue <- file.path(nonoisetrue.path, folders[i])
+  dir.create(nonoisetrue)
   level <- file.path(level.path, folders[i])
   dir.create(level)
 }
@@ -318,7 +299,6 @@ for (i in 1:nrow(all)){
 # Does the simulations
 for (i in 1:nrow(all)){
   if (!length(list.files(file.path(data.path,all$folder[i]))) %in% c(50)) {
-    
     # generate group matrix for each simulated data set
     res <- mat.generate.asw(p.con = .50, 
                             nvar = all$v[i], AR=all$ar[i],
@@ -345,12 +325,15 @@ for (i in 1:nrow(all)){
       write.csv(out$paths,
                 file.path(true.path, all$folder[i], paste0("ind_", a, ".csv")),
                 row.names = FALSE)
+
+      write.csv(out$nonoisepaths,
+                file.path(nonoisetrue.path, all$folder[i], paste0("ind_", a, ".csv")),
+                row.names = FALSE)
       
       write.csv(out$levels,
                 file.path(level.path, all$folder[i], paste0("ind_", a, ".csv")),
                 row.names = FALSE)
-    }
-    
-  }
-}
-
+    } # ends for loop
+  
+  } # ends if length loop
+} # ends simulation for loop
