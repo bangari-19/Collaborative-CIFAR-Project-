@@ -66,7 +66,7 @@ generate_random_matrix <- function(size, mu, sigma, seed) {
 }
 
 
-generate_mvn_samples <- function(size, mean_vector, cov_matrix, seed) {
+generate_mvn_samples <- function(mean_vector, cov_matrix, seed) {
   "Generate a random vector from a multivariate normal distribution.
 
   Args:
@@ -78,39 +78,46 @@ generate_mvn_samples <- function(size, mean_vector, cov_matrix, seed) {
   Returns:
     A random vector sampled from the specified multivariate normal distribution."
   
-  L <- chol(cov_matrix)  # Cholesky decomposition of the covariance matrix
-  random_numbers <- syncrng.box.muller(0, 1, size, seed)  # Generate standard normal random numbers
-  random_matrix <- matrix(random_numbers, nrow = 1, ncol = size)  # Convert to matrix form
-  mvn_samples <- t(t(random_matrix %*% L) + mean_vector)  # Transform to multivariate normal
+  size <- length(mean_vector) 
   
+  # Cholesky decomposition of the covariance matrix
+  # Transpose to get lower triangular matrix
+  L <- t(chol(cov_matrix))
+  Z <- syncrng.box.muller(0, 1, size, seed)
+  # Z <- rnorm(size) 
+  mvn_samples <- L %*% Z + mean_vector
+
   return(mvn_samples)
 }
 
 
-################################## EXAMPLES ###################################
-# Histogram from syncrng
-mu = 3
-sigma = 1
-n = 10000
-seed = 42
-random_samples <- syncrng.box.muller(mu, sigma, n, seed)
-hist(random_samples, breaks=100)
+################################## EXAMPLES ####################################
 
-# Sample a random matrix
-random_matrix = generate_random_matrix(size=6, mu, sigma, seed)
-print(random_matrix)
+#################### COMPARE R WITH SYNCRNG FOR BASIC PLOTS ####################
+set.seed(123)
+n_samples <- 10000
+sync_rng <- SyncRNG(seed = 123)
 
-# Sample from mvn distribution 
-size = 6
-mean_vector = rep(0, 6)
-cov_matrix = diag(rep(0.1, 6))
-random_matrix_mvn = generate_mvn_samples(size=6, rep(0, 6), cov_matrix, seed)
-print(random_matrix_mvn)
+sync_uniforms <- replicate(n_samples, sync_rng$rand())
+base_uniforms <- runif(n_samples)
 
+par(mfrow = c(2, 1))
+hist(sync_uniforms, breaks = 30, main = "SyncRNG Uniform Distribution", xlab = "Value")
+hist(base_uniforms, breaks = 30, main = "Base R Uniform Distribution", xlab = "Value")
+
+# Compare Normal Random Numbers
+sync_normals <- syncrng.box.muller(0, 1, n_samples, seed = 123)
+base_normals <- rnorm(n_samples)
+
+par(mfrow = c(2, 1))
+hist(sync_normals, breaks = 30, main = "SyncRNG Normal Distribution", xlab = "Value")
+hist(base_normals, breaks = 30, main = "Base R Normal Distribution", xlab = "Value")
+
+
+#################### COMPARE MVN SAMPLES FROM SYNCRNG AND RMVNORM ##############
 # Plot rmvnorm vs syncrng samples to compare multivariate normal distribution
-size <- 2  # For 2D plot
 mean_vector <- c(0, 0)
-cov_matrix <- diag(c(1, 1))  # Zero on off-diagonals --> no correlation between x and y 
+cov_matrix <- diag(c(1, 1))  # Zero on off-diagonals --> no correlation between x and y
 num_samples <- 10000
 
 samples_rmvnorm <- rmvnorm(num_samples, mean_vector, cov_matrix)
@@ -118,7 +125,7 @@ samples_syncrng <- matrix(0, nrow = num_samples, ncol = size)
 
 seed <- 123
 for (i in 1:num_samples) {
-  samples_syncrng[i, ] <- generate_mvn_samples(size, mean_vector, cov_matrix, seed + i)
+  samples_syncrng[i, ] <- generate_mvn_samples(mean_vector, cov_matrix, seed + i)
 }
 
 samples_rmvnorm_df <- data.frame(x = samples_rmvnorm[,1], y = samples_rmvnorm[,2])
@@ -135,3 +142,17 @@ ggplot(combined_df, aes(x = x, y = y, color = source)) +
        y = "Y-axis") +
   theme_minimal() +
   scale_color_manual(values = c("rmvnorm" = "blue", "syncrng" = "red"))
+
+
+#################### PLOT MVN SAMPLES FROM SYNCRNG #############################
+set.seed(12)
+mean_vector <- c(0, 0)
+cov_matrix <- matrix(c(1, 0.9, 0.9, 1), nrow = 2)
+n_samples <- 1000
+samples <- matrix(0, nrow = 2, ncol = n_samples)
+
+for (i in 1:n_samples) {
+  samples[, i] <- generate_mvn_samples(mean_vector, cov_matrix, seed = 12 + i)
+}
+
+plot(samples[1, ], samples[2, ], main = "Bivariate normal with variance 1, covariance 0.9", asp = 1)
