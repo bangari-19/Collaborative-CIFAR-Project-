@@ -4,6 +4,9 @@ library(MASS)
 library('mvtnorm')
 library(ggplot2)
 
+universal_seed <- 42
+universal_rng <- SyncRNG(seed=universal_seed)
+
 # Print random integers 
 # s <- SyncRNG(seed=42)
 # for (i in 1:10)
@@ -23,9 +26,7 @@ syncrng.box.muller <- function(mu, sigma, n, seed=0, rng=NULL) {
    Returns:
      A vector of n random samples from the specified normal distribution."
 
-  if (is.null(rng)) {
-    rng <- SyncRNG(seed=seed)
-  }
+  rng <- if (is.null(rng)) universal_rng else rng
   
   two.pi <- 2 * pi
   ngen <- ceiling(n / 2)
@@ -49,7 +50,7 @@ syncrng.box.muller <- function(mu, sigma, n, seed=0, rng=NULL) {
 }
 
 
-generate_random_matrix <- function(size, mu, sigma, seed) {
+generate_random_matrix <- function(size, mu, sigma, rng=NULL) {
   "Generate a matrix with elements sampled from a normal distribution.
 
   Args:
@@ -61,12 +62,13 @@ generate_random_matrix <- function(size, mu, sigma, seed) {
   Returns:
     A size x size matrix with elements sampled from the specified normal distribution."
   
-  random_numbers <- syncrng.box.muller(mu, sigma, size * size, seed)
+  rng <- if (is.null(rng)) universal_rng else rng
+  random_numbers <- syncrng.box.muller(mu, sigma, size * size, rng = rng)
   matrix(random_numbers, nrow = size, ncol = size)
 }
 
 
-generate_mvn_samples <- function(mean_vector, cov_matrix, seed) {
+generate_mvn_samples <- function(mean_vector, cov_matrix, rng=NULL) {
   "Generate a random vector from a multivariate normal distribution.
 
   Args:
@@ -78,27 +80,28 @@ generate_mvn_samples <- function(mean_vector, cov_matrix, seed) {
   Returns:
     A random vector sampled from the specified multivariate normal distribution."
   
-  size <- length(mean_vector) 
-  
   # Cholesky decomposition of the covariance matrix
   # Transpose to get lower triangular matrix
+  rng <- if (is.null(rng)) universal_rng else rng
+  size <- length(mean_vector)
   L <- t(chol(cov_matrix))
-  Z <- syncrng.box.muller(0, 1, size, seed)
-  # Z <- rnorm(size) 
+  Z <- syncrng.box.muller(0, 1, size, rng = rng)
   mvn_samples <- L %*% Z + mean_vector
-
   return(mvn_samples)
 }
 
+# mean_vector <- c(1, 1)
+# cov_matrix <- diag(c(2, 2))  # Zero on off-diagonals --> no correlation between x and y
+# print(generate_mvn_samples(mean_vector=mean_vector, cov_matrix=cov_matrix))
+# 
+# print(generate_random_matrix(2, 0, 1))
 
 ################################## EXAMPLES ####################################
 
 #################### COMPARE R WITH SYNCRNG FOR BASIC PLOTS ####################
-set.seed(123)
-n_samples <- 10000
-sync_rng <- SyncRNG(seed = 123)
-
-sync_uniforms <- replicate(n_samples, sync_rng$rand())
+n_samples <- 1000
+s <- SyncRNG(seed=42)
+sync_uniforms <- replicate(n_samples, s$rand())
 base_uniforms <- runif(n_samples)
 
 par(mfrow = c(2, 1))
@@ -116,16 +119,15 @@ hist(base_normals, breaks = 30, main = "Base R Normal Distribution", xlab = "Val
 
 #################### COMPARE MVN SAMPLES FROM SYNCRNG AND RMVNORM ##############
 # Plot rmvnorm vs syncrng samples to compare multivariate normal distribution
-mean_vector <- c(0, 0)
-cov_matrix <- diag(c(1, 1))  # Zero on off-diagonals --> no correlation between x and y
-num_samples <- 10000
+mean_vector <- c(1, 1)
+cov_matrix <- matrix(c(1, 0.5, 0.5, 1), nrow = 2)  # Zero on off-diagonals --> no correlation between x and y
+num_samples <- 1000
 
 samples_rmvnorm <- rmvnorm(num_samples, mean_vector, cov_matrix)
 samples_syncrng <- matrix(0, nrow = num_samples, ncol = size)
 
-seed <- 123
 for (i in 1:num_samples) {
-  samples_syncrng[i, ] <- generate_mvn_samples(mean_vector, cov_matrix, seed + i)
+  samples_syncrng[i, ] <- generate_mvn_samples(mean_vector, cov_matrix)
 }
 
 samples_rmvnorm_df <- data.frame(x = samples_rmvnorm[,1], y = samples_rmvnorm[,2])
@@ -144,15 +146,14 @@ ggplot(combined_df, aes(x = x, y = y, color = source)) +
   scale_color_manual(values = c("rmvnorm" = "blue", "syncrng" = "red"))
 
 
-#################### PLOT MVN SAMPLES FROM SYNCRNG #############################
-set.seed(12)
+#################### PLOT MVN SAMPLES FROM ONLY SYNCRNG ########################
 mean_vector <- c(0, 0)
 cov_matrix <- matrix(c(1, 0.9, 0.9, 1), nrow = 2)
-n_samples <- 1000
+n_samples <- 100
 samples <- matrix(0, nrow = 2, ncol = n_samples)
 
 for (i in 1:n_samples) {
-  samples[, i] <- generate_mvn_samples(mean_vector, cov_matrix, seed = 12 + i)
+  samples[, i] <- generate_mvn_samples(mean_vector, cov_matrix)
 }
 
 plot(samples[1, ], samples[2, ], main = "Bivariate normal with variance 1, covariance 0.9", asp = 1)
