@@ -7,7 +7,7 @@ library(ggplot2)
 universal_seed <- 42
 universal_rng <- SyncRNG(seed=universal_seed)
 
-# Print random integers 
+# #Print random integers 
 # s <- SyncRNG(seed=42)
 # for (i in 1:10)
 #   cat(s$randi(), '\n')
@@ -103,11 +103,12 @@ n_samples <- 1000
 s <- SyncRNG(seed=42)
 sync_uniforms <- replicate(n_samples, s$rand())
 base_uniforms <- runif(n_samples)
-
+par(mar = c(1, 1, 1, 1))
 par(mfrow = c(2, 1))
 hist(sync_uniforms, breaks = 30, main = "SyncRNG Uniform Distribution", xlab = "Value")
 hist(base_uniforms, breaks = 30, main = "Base R Uniform Distribution", xlab = "Value")
 
+par(mfrow = c(1, 1))
 # Compare Normal Random Numbers
 sync_normals <- syncrng.box.muller(0, 1, n_samples, seed = 123)
 base_normals <- rnorm(n_samples)
@@ -123,6 +124,7 @@ mean_vector <- c(1, 1)
 cov_matrix <- matrix(c(1, 0.5, 0.5, 1), nrow = 2)  # Zero on off-diagonals --> no correlation between x and y
 num_samples <- 1000
 
+size=2
 samples_rmvnorm <- rmvnorm(num_samples, mean_vector, cov_matrix)
 samples_syncrng <- matrix(0, nrow = num_samples, ncol = size)
 
@@ -155,5 +157,6 @@ samples <- matrix(0, nrow = 2, ncol = n_samples)
 for (i in 1:n_samples) {
   samples[, i] <- generate_mvn_samples(mean_vector, cov_matrix)
 }
+
 
 plot(samples[1, ], samples[2, ], main = "Bivariate normal with variance 1, covariance 0.9", asp = 1)

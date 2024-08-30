@@ -1,11 +1,13 @@
 #230222: AR=.6; Contemp = .35; lagged = .45, noise=.01
 rm(list=ls())
-install.packages('SyncRNG')
+#install.packages('SyncRNG')
 library(SyncRNG)
-s <- SyncRNG(seed=123456)
-for (i in 1:10) {
-  cat(s$randi(), '\n')
-}
+seed=123456
+#options(error=recover) 
+s <- SyncRNG(seed=seed)
+# for (i in 1:10) {
+#   cat(s$randi(), '\n')
+# }
 
 #######################################################
 #### 1. load functions needed to simulate the data ####
@@ -16,12 +18,42 @@ null_groups <- function(indices,lvl,nrow) {
   result <- sapply(1:nrow(indices), function(i) (indices[i, 1] - 1) * nrow + indices[i, 2])
   c <- which(lvl=="grp")
   any_in_grp <- which(result %in% c)
-  print(any_in_grp)
-  print('any_in_grp')
+  # print(any_in_grp)
+  # print('any_in_grp')
 
   return(indices)
 
 }
+
+
+# Generate n numbers from N(mu, sigma^2)
+syncrng.box.muller <- function(mu, sigma, n, seed=0, rng=NULL)
+{
+  if (is.null(rng)) {
+    rng <- SyncRNG(seed=seed)
+  }
+  
+  two.pi <- 2 * pi
+  ngen <- ceiling(n / 2)
+  out <- replicate(2 * ngen, 0.0)
+  
+  for (i in 1:ngen) {
+    u1 <- 0.0
+    u2 <- 0.0
+    
+    while (u1 == 0) { u1 <- rng$rand(); }
+    while (u2 == 0) { u2 <- rng$rand(); }
+    
+    mag <- sigma * sqrt(-2.0 * log(u1))
+    z0 <- mag * cos(two.pi * u2) + mu
+    z1 <- mag * sin(two.pi * u2) + mu
+    
+    out[2*i - 1] = z0;
+    out[2*i] = z1;
+  }
+  return(out[1:n]);
+}
+
 
 convert_to_arr_ind_format <- function(row, col, matrix_dim) {
   arr_ind_result <- which(apply(expand.grid(seq_len(matrix_dim[1]), seq_len(matrix_dim[2])), 1, function(x) all(x == c(row, col))))
@@ -42,6 +74,7 @@ regen <- FALSE
   return(regen)
 
 }
+
 check_symmetric_indices <- function(mat) {
   # Get the non-zero indices of the matrix using arr.ind = TRUE
   non_zero_indices <- which(mat != 0, arr.ind = TRUE)
@@ -69,6 +102,7 @@ check_symmetric_indices <- function(mat) {
 
 mat.generate.asw <- function(p.con,nvar,AR,dens,p.group,con.b,lag.b){
   repeat{
+    set.seed(seed)
     A <- matrix(0, ncol = nvar, nrow = nvar, )        ###create null contemporaneous matrix
     Phi <- matrix(0, ncol = nvar, nrow = nvar)        ###create null lagged matrix (remember -> ARs in diagonal)
     pos.all <- 2*(nrow(A)*ncol(A))                    ###list all available (non-ar) spots (You could add - 2*nrow(A) to remove AR spots (see AW code))
@@ -114,18 +148,20 @@ mat.generate.asw <- function(p.con,nvar,AR,dens,p.group,con.b,lag.b){
 #adds noise, and simulates the time series (unnecessary for our purposes but helpful for checks!)
 ts.generate.asw <- function (mat, lvl, t,dens,p.group,con.b,lag.b,p.con) {
   repeat {
-    set.seed(10)
+    set.seed(seed)
     repeat{
-      set.seed(10)
+      set.seed(seed)
       v <- ncol(mat)/2                                                                             ###calculate number of variables in matrix
       Phi <- mat[, 1:v]                                                                             ###pull out Phi
       A <- mat[, (v+1):(v*2)]                                                                       ###pull out A
       A_ind <- matrix(0, ncol=v, nrow=v)                                                            ###set A indices to zero
       #A[3,5]<-A[5,3]
       group_A_reverse <-check_reverse_offdiagonal(A)
+  #    print(huh)
       if(group_A_reverse) {
       print('something is wrong with your group level contem paths')
-      print(huh)}
+      #print(huh)
+        }
       indices.A <- which(A==0,arr.ind=T) 
 
       ###finds indices of zero elements in matrix 
@@ -149,7 +185,18 @@ ts.generate.asw <- function (mat, lvl, t,dens,p.group,con.b,lag.b,p.con) {
 
       
 
-      rand<-sample(c(round(cnt.all/2),(round(cnt.all)-round(cnt.all/2))),size=2,replace=TRUE)   
+      rand<-sample(c(round(cnt.all/2),(round(cnt.all)-round(cnt.all/2))),size=2,replace=TRUE) 
+      
+      #vtest <-c(round(cnt.all/2),(round(cnt.all)-round(cnt.all/2)))
+          
+      #s <- SyncRNG(seed=seed)
+      
+      #randtest <- s$shuffle(vtest)[1:2]
+      # print(rand)
+      # print('rand')
+      #print(randtest)
+      #print('randtest')
+
          ###randomly select row/col combinations for individual-level paths
 
          # The key here is that we want to remove paths that have group level 
@@ -160,10 +207,32 @@ ts.generate.asw <- function (mat, lvl, t,dens,p.group,con.b,lag.b,p.con) {
         # print(Phi) # contains the group level Phi
         
         row.col.A      <- sample(1:nrow(indices.A), rand[1], replace = F) 
-        row.col.Phi      <- sample(1:nrow(indices.Phi), rand[2], replace = F)
+        row.col.Phi      <- sample(1:nrow(indices.Phi), rand[2], replace = F) 
+        # print(row.col.A)
+        # print('row.col.A')
+        # print('normal sampling')
+        #atest <-1:nrow(indices.A)
+        #row.col.A <-s$shuffle(atest)[1:randtest[1]]
+        # print(row.col.A)
+        # print('row.col.A')
+        # print('new sampling')
+        # print(huh)
+        # s <- SyncRNG(seed=12345)
+        #atest <-1:nrow(indices.Phi)
+        #row.col.Phi   <- s$shuffle(atest)[1:randtest[2]]
 
+        
+        
+        
+        # print(row.col.Phi)
+        # print('indices for A and phi')
+        # print(huh)
+        
         Phi[indices.Phi[row.col.Phi,]] <- lag.b                                                       ###set betas for lagged paths
-        A[indices.A[row.col.A,]]     <- con.b                                                         ###set betas for contemporaneous paths
+        A[indices.A[row.col.A,]]     <- con.b  
+        ###set betas for contemporaneous paths
+        print(lag.b)
+        break
         # print('group + individ level A')
         # print(A) # contains the group level A
         # print('group + individ level Phi')
@@ -184,6 +253,9 @@ ts.generate.asw <- function (mat, lvl, t,dens,p.group,con.b,lag.b,p.con) {
         while (regen==TRUE){
           A <- mat[, (v+1):(v*2)] # reset A to the group level
           row.col.A      <- sample(1:nrow(indices.A), rand[1], replace = F) 
+          # atest <-1:nrow(indices.A)
+          # randtest <- s$shuffle(vtest)[1:2]
+          # row.col.A <-s$shuffle(atest)[1:randtest[1]]
           A[indices.A[row.col.A,]]     <- con.b
           # print('inside regen A')
           # print(A)
@@ -194,6 +266,9 @@ ts.generate.asw <- function (mat, lvl, t,dens,p.group,con.b,lag.b,p.con) {
         while (regen==TRUE){
           Phi <- mat[, 1:v]
           row.col.Phi      <- sample(1:nrow(indices.Phi), rand[2], replace = F)
+          # atest <-1:nrow(indices.Phi)
+          # randtest <- s$shuffle(vtest)[1:2]
+          #row.col.Phi   <- s$shuffle(atest)[1:randtest[2]]
           Phi[indices.Phi[row.col.Phi,]] <- lag.b 
           # print('inside regen Phi')
           # print(Phi)
@@ -208,14 +283,23 @@ ts.generate.asw <- function (mat, lvl, t,dens,p.group,con.b,lag.b,p.con) {
       nonoisepaths  <- cbind(Phi, A) ### bind Phi and A before adding noise to them to check
 
       noise.inds      <- which(A != 0, arr.ind = TRUE)                                              ####add noise to A betas, SD =.1
-      A[noise.inds]   <- A[noise.inds] + rnorm(n = nrow(noise.inds), mean = 0, sd = .01)
+      A[noise.inds]   <- A[noise.inds] +  rnorm(n = nrow(noise.inds), mean = 0, sd = .01)
+#        rnorm(n = nrow(noise.inds), mean = 0, sd = .01)
+        # syncrng.box.muller(mu=0,sigma=0.01,nrow(noise.inds),seed=12345)
+        # rnorm(n = nrow(noise.inds), mean = 0, sd = .01)
       noise.inds      <- which(Phi != 0, arr.ind = TRUE)                                            ###add noise to Phi betas, SD =.1
-      Phi[noise.inds] <- Phi[noise.inds] + rnorm(n = nrow(noise.inds), mean = 0, sd = .01)
+      Phi[noise.inds] <- Phi[noise.inds] +  rnorm(n = nrow(noise.inds), mean = 0, sd = .01)
+        # syncrng.box.muller(mu=0,sigma=0.01,nrow(noise.inds),seed=12345)
+      # rnorm(n = nrow(noise.inds), mean = 0, sd = .01)
       break
     }
     
-    st <- (t+100)    #(t+50)                                                            ###This chunk is from Alex's code and is used to simulate the time series 
-    noise <- matrix(rnorm(v*st,0,5),v) #
+    st <- (t+50)    #(t+50)   
+    set.seed(seed)
+    ###This chunk is from Alex's code and is used to simulate the time series 
+    noise <- matrix(rnorm(v*st,0,1),v)
+  #    syncrng.box.muller(mu=0,sigma=5,v*st,seed=12345),v)
+      # rnorm(v*st,0,5),v) #
     I     <- diag(v) # identity matrix
     time  <- matrix(0,nrow=v, ncol=(st+1))
     time1 <- matrix(0,nrow=v, ncol=st)
@@ -224,7 +308,7 @@ ts.generate.asw <- function (mat, lvl, t,dens,p.group,con.b,lag.b,p.con) {
       time1[,i]  <- solve(I-A)%*%(Phi%*%time[,i] + noise[,i])
       time[,i+1] <- time1[,i]
     }               
-    time1  <- time1[,(101:(100+t))] #time1[,(51:(50+t))]                                                                   
+    time1  <- time1[,(51:(50+t))] #time1[,(51:(50+t))]                                                                   
     series <- t(time1)
     paths  <- cbind(Phi, A)
     if (abs(max(series, na.rm = TRUE)) < 20 & abs(min(series, na.rm = TRUE)) > .01 
@@ -247,8 +331,8 @@ ts.generate.asw <- function (mat, lvl, t,dens,p.group,con.b,lag.b,p.con) {
 
 # enter simulation parameters
 v             <- c(6) # Number of variables
-n             <- c(100) # number of individuals
-t             <- c(100) # Number of time points
+n             <- c(1) # number of individuals
+t             <- c(100) # Nu mber of time points
 rep           <- seq(1) # replications per condition 
 ar            <-c(.6) # ar paths to try
 conditions    <- expand.grid(t, n, v, ar,rep)
@@ -300,19 +384,27 @@ for (i in 1:nrow(all)){
 for (i in 1:nrow(all)){
   if (!length(list.files(file.path(data.path,all$folder[i]))) %in% c(50)) {
     # generate group matrix for each simulated data set
+   
+    contest<-negcon
+    lagtest<-neglag
+    con.b <- s$shuffle(contest)[1]
+    lag.b <- s$shuffle(lagtest)[1]
     res <- mat.generate.asw(p.con = .50, 
                             nvar = all$v[i], AR=all$ar[i],
                             p.group = .50,dens = .20,
-                            con.b = sample(negcon, 1), lag.b = sample(neglag, 1))
+                            con.b = con.b, lag.b = lag.b)
     
     #for each individual,generate matrix and ts
     for (a in 1:all$n[i]){
-      
+      contest<-negcon
+      lagtest<-neglag
+      con.b <- s$shuffle(contest)[1]
+      lag.b <- s$shuffle(lagtest)[1]
       out <- ts.generate.asw(mat = res$sub1,
                              lvl = res$lvl1,
                              t   = all$t[i],
                              p.group = .50,dens = .20,
-                             con.b = sample(negcon, 1), lag.b = sample(neglag, 1),
+                             con.b = con.b, lag.b = lag.b,
                              p.con = .50)
       
       out$series <- round(out$series,digits=5)
@@ -337,3 +429,4 @@ for (i in 1:nrow(all)){
   
   } # ends if length loop
 } # ends simulation for loop
+
