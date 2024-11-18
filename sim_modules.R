@@ -1,4 +1,80 @@
-set.seed(10)
+syncrng.box.muller <- function(mu, sigma, n, seed=0, rng=NULL) {
+  "Generate random samples from a normal distribution using the Box-Muller transform.
+  
+  Args:
+     mu: The mean of the normal distribution.
+     sigma: The standard deviation of the normal distribution.
+     n: The number of random samples to generate.
+     seed: An optional seed value for the random number generator (default is 0).
+     rng: An optional instance of SyncRNG. If NULL, a new instance will be created using the seed.
+  
+   Returns:
+     A vector of n random samples from the specified normal distribution."
+  
+  rng <- if (is.null(rng)) universal_rng else rng
+  
+  two.pi <- 2 * pi
+  ngen <- ceiling(n / 2)
+  out <- replicate(2 * ngen, 0.0)
+  
+  for (i in 1:ngen) {
+    u1 <- 0.0
+    u2 <- 0.0
+    
+    while (u1 == 0) { u1 <- rng$rand(); }
+    while (u2 == 0) { u2 <- rng$rand(); }
+    
+    mag <- sigma * sqrt(-2.0 * log(u1))
+    z0 <- mag * cos(two.pi * u2) + mu
+    z1 <- mag * sin(two.pi * u2) + mu
+    
+    out[2*i - 1] = z0;
+    out[2*i] = z1;
+  }
+  return(out[1:n]);
+}
+
+
+generate_random_matrix <- function(size, mu, sigma, rng=NULL) {
+  "Generate a matrix with elements sampled from a normal distribution.
+
+  Args:
+    size: The dimension of the square matrix (number of rows and columns).
+    mu: The mean of the normal distribution.
+    sigma: The standard deviation of the normal distribution.
+    seed: A seed value for the random number generator.
+
+  Returns:
+    A size x size matrix with elements sampled from the specified normal distribution."
+  
+  rng <- if (is.null(rng)) universal_rng else rng
+  random_numbers <- syncrng.box.muller(mu, sigma, size * size, rng = rng)
+  matrix(random_numbers, nrow = size, ncol = size)
+}
+
+
+generate_mvn_samples <- function(mean_vector, cov_matrix, rng=NULL) {
+  "Generate a random vector from a multivariate normal distribution.
+
+  Args:
+    size: The dimension of the multivariate normal distribution (length of the mean vector).
+    mean_vector: The mean vector of the multivariate normal distribution.
+    cov_matrix: The covariance matrix of the multivariate normal distribution.
+    seed: A seed value for the random number generator to ensure reproducibility.
+
+  Returns:
+    A random vector sampled from the specified multivariate normal distribution."
+  
+  # Cholesky decomposition of the covariance matrix
+  # Transpose to get lower triangular matrix
+  rng <- if (is.null(rng)) universal_rng else rng
+  size <- length(mean_vector)
+  L <- t(chol(cov_matrix))
+  Z <- syncrng.box.muller(0, 1, size, rng = rng)
+  mvn_samples <- L %*% Z + mean_vector
+  return(mvn_samples)
+}
+ 
 
 plot_matrix <- function(mat, save=FALSE, name=NULL) {
   # Plots a matrix using plot.matrix library and optionally saves the plot to a file.
@@ -323,51 +399,3 @@ clip_outliers <- function(timeseries, sigma, measure_amp, debug, start, contempa
 }
 
 
-
-# --------------------------TEST FOR ONE INDIVIDUAL------------------------------- #
-data <- read.csv("~/Desktop/CIFAR/220429.FinalMatrices/1.csv")
-size = 6
-start <- rep(0, size)
-steps = 100
-start_index = size+1
-stop = length(data)
-matContemp <- data[, start_index:stop]
-matLagged <- data[, 1:size]
-covContemp <- matrix(rnorm(size**2), nrow=size, ncol=size)
-covLagged <- matrix(rnorm(size**2), nrow=size, ncol=size)
-ampContemp = 0.01
-ampLagged = 0.01
-ampMeasure = 1.0
-measureCov <- ampMeasure * diag(size)
-maskContemp =  make_mask(matContemp, contemp=T)
-maskLagged = make_mask(matLagged, contemp=F)
-clip_indices <- c(0,1)
-clip_mins <- c(0.5, 0.7)
-clip_maxs <- c(0.8,1.3)
-clip_sigma = 3  # smaller clip_sigma --> more clipping
-
-ts = generate_timeseries(start, steps, ampContemp, matContemp, covContemp, ampLagged, matLagged, covLagged, covMeasure, debug=F)
-ts_clipped = clip_outliers(ts, clip_sigma, ampMeasure, debug=F, start, ampContemp, matContemp, covContemp, ampLagged, matLagged, covLagged, covMeasure)
-
-library(ggplot2)
-#samples = generate_timeseries(start, steps, ampContemp, matContemp, covContemp, ampLagged, matLagged, covLagged, measureCov, save=F)
-#data=as.data.frame(samples)
-
-#plot(samples[,1], type='l')
-
-df <- data.frame(
-  days = 1:(steps-1),
-  original = ts[, 1],  # only param 1
-  clipped = ts_clipped[, 1]
-)
-
-ggplot(df, aes(x = days)) +
-  geom_line(aes(y = original, color = "Original"), linetype = "solid") +
-  geom_line(aes(y = clipped, color = "Clipped"), linetype = "dashed") +
-  xlab("time [days]") +
-  ylab("value") +
-  ggtitle("Original vs. Clipped Timeseries") +
-  scale_color_manual(values = c(Original = "blue", Clipped = "red")) +
-  scale_linetype_manual(values = c(Original = "solid", Clipped = "dashed")) +
-  labs(color = "Timeseries") +
-  theme_minimal()

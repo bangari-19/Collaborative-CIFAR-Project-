@@ -6,12 +6,14 @@ import input as input
 import os
 import random
 
-random.seed(1230)
+#random.seed(1230)
 size= input.size
 pathin= input.pathin
 pathout=input.pathout
 cols = 2*size
 print('Sim Directory is %s'%input.pathin)
+
+
 print('reading from ', input.num_participants, 'participants', input.steps, 'timesteps', input.ampContemp, input.ampLagged, input.ampMeasure, input.maskZero)
 printpath=pathout+'sims/numParticipants_%s'%input.num_participants
 print('Main dir is %s'%printpath)
@@ -48,11 +50,15 @@ for j in range(input.num_iterations):
             
     if input.debug:
         print('making rep dirs')
-    savepathclip=os.path.join(savepathcliporig,'rep_%i/'%j)
-    savepathpreclip=os.path.join(savepathprecliporig,'rep_%i/'%j)
+    #
+    savepathclip=os.path.join(savepathcliporig,'rep_%i/'%(j+1))
+    savepathpreclip=os.path.join(savepathprecliporig,'rep_%i/'%(j+1))
+    savepathlevels = pathout+'sims/numParticipants_%s/steps_%s/Contemp_%s_amp_%s/Lagged_%s_amp_%s/Measure_%s_amp_%s/mask_%s/levels_noise/rep_%i/'%(input.num_participants,str(input.steps),input.covContempName,str(input.ampContemp),input.covLaggedName, str(input.ampLagged),input.measurecovName, str(input.ampMeasure),str(input.maskZero),(j+1))
+    #print(savepathlevels)
     try:
         os.mkdir(savepathclip)
         os.mkdir(savepathpreclip)
+        os.mkdir(savepathlevels)
     except:
         print(f'rep dir {j} exists')
     #vec = [97, 68, 6, 40, 41, 7, 69, 96, 94, 43, 5, 4, 42, 95, 91, 1, 92, 3, 45, 44, 2, 93, 122, 37, 36, 123, 121, 135, 34, 35, 134, 124, 130, 31, 131, 125, 133, 127, 32, 33, 126, 132, 103, 102, 100, 128, 15, 14, 129, 101, 105, 10, 38, 39, 11, 104, 13, 12, 75, 61, 74, 62, 63, 98, 67, 73, 9, 8, 72, 66, 99, 70, 64, 65, 71]
@@ -70,8 +76,8 @@ for j in range(input.num_iterations):
         
         # sm.save_matrix(matContemp, 'matContempOrig.csv')
         # sm.save_matrix(matLagged, 'matLaggedOrig.csv')
-        sm.plot_matrix(matLagged, True, 'matLaggedOrig.png')
-        sm.plot_matrix(matContemp, True, 'matContempOrig.png')
+        # sm.plot_matrix(matLagged, True, 'matLaggedOrig.png')
+        # sm.plot_matrix(matContemp, True, 'matContempOrig.png')
         
         if input.covContempName=='randn':
             covContemp = np.random.randn(size,size)
@@ -105,7 +111,9 @@ for j in range(input.num_iterations):
         # sm.plot_matrix(maskLagged, True, 'maskLagged.png')
         # sm.plot_matrix(maskContemp, True, 'maskContemp.png')
         plt.close()
-        samples = sm.generate_timeseries(input.start, input.steps, input.ampContemp, matContemp, covContemp, input.ampLagged, matLagged, covLagged,measureCov,input.save)
+        #print(input.save, 'hi renee save?')
+       
+        samples = sm.generate_timeseries(input.start, input.steps, input.ampContemp, matContemp, covContemp, input.ampLagged, matLagged, covLagged,measureCov,input.save, csvnum,savepathlevels)
         
         
         if input.debug:

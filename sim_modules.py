@@ -4,7 +4,7 @@ from numpy.linalg import inv
 import matplotlib.pyplot as plt
 
 import random
-random.seed(10)
+#random.seed(10)
 import os
 from scipy.stats import norm
 
@@ -19,6 +19,26 @@ def plot_matrix(mat, save=False, name=None):
     if save:
         plt.savefig(name)
     plt.close()
+
+def save_forR(lagmat,contempat,name):
+    import matplotlib as mpl
+    import numpy as np
+    from itertools import chain
+
+    num_rows=np.shape(lagmat)[1]
+    num_vars = np.shape(lagmat)[1] + np.shape(contempat)[1]
+    header=''
+    header=[header+"V%i,"%i for i in range(1,num_vars)]
+    header = [*header,"V%i"%num_vars]
+    header= ' '.join(header)
+    newmat=np.zeros((num_rows,num_vars))
+    newmat[0:num_rows,0:num_rows]=lagmat
+    newmat[0:num_rows,num_rows:num_vars]=contempat
+    #print((newmat))
+#     "V1","V2","V3","V4","V5","V6","V7","V8","V9","V10","V11","V12"
+# 0.453307303047034,0,0,0,0,0.448866118101956,0,0,0,0,0,0
+
+    np.savetxt(name,newmat, fmt='%10.7f',delimiter=',',header=header)
 
 def save_matrix(mat, name):
     import matplotlib as mpl
@@ -48,7 +68,7 @@ def coeff_draw_from_cov(amplitude, mat,cov,mask):
     import matplotlib.pyplot as plt
     size=len(cov)
 
-    plotmat=True
+    plotmat=False
     # noRand=True # are we adding random noise to matrices
     
     # if noRand:
@@ -78,13 +98,13 @@ def coeff_draw_from_cov(amplitude, mat,cov,mask):
     #         noisy_mat[i,j] = stepmat[i,j]*mask[i,j]
     noisy_mat = np.multiply(stepmat,mask)# mask out the relevant terms
 
-    print(np.shape(noisy_mat))
+
     if plotmat:
         plot_matrix(noisy_mat,True, 'maskedmat%2.2f.png'%amplitude)
         save_matrix(noisy_mat, 'maskedmat%2.2f.csv'%amplitude)
     return noisy_mat
 
-def generate_timeseries(start,len,contempamp, contempmat, contempcov, lagamp, lagmat, lagcov, measurecov, save=False):
+def generate_timeseries(start,len,contempamp, contempmat, contempcov, lagamp, lagmat, lagcov, measurecov, save=False, csvnum=1, savepath=''):
     ''' Using Y = Ylag*lagmat + Y*contempmat
     so Y= (Ylag*lagmat)*(I-contempmat)^-1
     '''
@@ -99,11 +119,19 @@ def generate_timeseries(start,len,contempamp, contempmat, contempcov, lagamp, la
     noisy_lagmat = coeff_draw_from_cov(lagamp, lagmat,lagcov, lagmask)
     noisy_contempmat = coeff_draw_from_cov(contempamp, contempmat,contempcov, contempmask)
     
+    
     if save:
-            save_matrix(noisy_lagmat, 'noisy_lagmat.csv')
-            plot_matrix(noisy_lagmat, True, 'noisy_lagmat.png')
-            save_matrix(noisy_contempmat, 'noisy_contempmat.csv')
-            plot_matrix(noisy_contempmat, True, 'noisy_contempmat.png')
+            #print(savepath)
+            try:
+                os.makedirs(savepath)
+            except:
+                print('savepath dir exists %i'%csvnum)
+
+            save_forR(noisy_lagmat,noisy_contempmat,savepath+'ind_%i.csv'%csvnum)
+#            save_matrix(noisy_lagmat, savepath+'noisy_lagmat_%i.csv'%csvnum)
+#            plot_matrix(noisy_lagmat, True, savepath+'noisy_lagmat_%i.png'%csvnum)
+#            save_matrix(noisy_contempmat,savepath+'noisy_contempmat_%i.csv'%csvnum)
+#            plot_matrix(noisy_contempmat, True, savepath+'noisy_contempmat_%i.png'%csvnum)
 
     #debug=True
     for i in range(1,len+100):

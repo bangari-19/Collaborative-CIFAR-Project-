@@ -1,11 +1,15 @@
 # Script to generate and store simulated pre-clipped and clipped timeseries data for all individuals 
 
 # Set working directory
-setwd("/Users/mac/Desktop/CIFAR/R code")
-
+setwd("/Users/reneehlozek/Code/Collaborative-CIFAR-Project-/")
+library('SyncRNG')
+seed=123456
+s <- SyncRNG(seed=seed)
+universal_rng <- SyncRNG(seed=seed)
 # Load scripts
 source("input.R")
 source("sim_modules.R")
+
 
 # Initialize input variables
 size <- size
@@ -16,7 +20,7 @@ steps <- steps
 print(steps)
 num_participants <- num_participants
 num_iterations <- num_iterations
-save <- FALSE
+save <- save
 covContempName <- covContempName
 covLaggedName <- covLaggedName
 measurecovName <- measurecovName
@@ -54,16 +58,12 @@ cat("Save path is", savepath, "\n")
 # Make directories if they do not exist
 if (!dir.exists(savepath)) {
   dir.create(savepath, recursive = TRUE)
-  if (debug) {
-    cat("making", savepath, "\n")
+  # if (debug) { cat("making", savepath, "\n") }
   }
-}
 
 # Check and create clip and preclip directories if clip_outliers is TRUE
 if (clipOutliers) {
-  if (debug) {
-    cat("Making clip/preclip dirs\n")
-  }
+  # if (debug) {cat("Making clip/preclip dirs\n")}
   savepathprecliporig <- file.path(savepath, "preclip/")
   savepathcliporig <- file.path(savepath, "clip/")
   dir.create(savepathprecliporig, showWarnings = FALSE, recursive = TRUE)
@@ -73,11 +73,13 @@ if (clipOutliers) {
 # Loop over iterations
 for (j in 1:num_iterations) {
   # Set unique seed for each iteration to control randomness 
-  set.seed(123 + j) 
+  seed = seed+j
+  s <- SyncRNG(seed=seed)
+  universal_rng <- SyncRNG(seed=seed)
   
-  if (debug) {
-    cat("making rep dirs\n")
-  }
+  # if (debug) {
+  #   cat("making rep dirs\n")
+  # }
   
   savepathclip <- file.path(savepathcliporig, paste0("rep_", j, "/"))
   savepathpreclip <- file.path(savepathprecliporig, paste0("rep_", j, "/"))
@@ -86,12 +88,15 @@ for (j in 1:num_iterations) {
   
   # Loop over participants
   for (number in 1:num_participants) {
-    if (debug) {
-      cat("Writing sims for participant", number, "and sim iteration", j, "\n")
-    }
+    # if (debug) {
+    #   cat("Writing sims for participant", number, "and sim iteration", j, "\n")
+    # }
     
+    # printpath(pathin)
+    # print(huh)
     # Load in input contemp and lagged coeff matrix data
-    file <- file.path(pathin, paste0(number, ".csv"))
+    file <- file.path(pathin, paste0("ind_",number, ".csv"))
+
     data <- read.csv(file, header = TRUE, sep = ",")
     matContemp <- as.matrix(data[, (size + 1):cols])
     matLagged <- as.matrix(data[, 1:size])
@@ -127,29 +132,29 @@ for (j in 1:num_iterations) {
     
     max_clip_threshold <- sqrt(diag(measureCov)[1]) * 3
     
-    if (debug) {
-      cat(max_clip_threshold, 'max', "\n")
-      for (p in 1:ncol(samples)) {
-        inds_pre <- which(samples[, p] > max_clip_threshold)
-        cat("pre clip:", inds_pre, samples[inds_pre, p], p, "\n")
-      }
-      cat("---- TEST pre clip -----\n")
-    }
+    # if (debug) {
+    #   cat(max_clip_threshold, 'max', "\n")
+    #   for (p in 1:ncol(samples)) {
+    #     inds_pre <- which(samples[, p] > max_clip_threshold)
+    #     cat("pre clip:", inds_pre, samples[inds_pre, p], p, "\n")
+    #   }
+    #   cat("---- TEST pre clip -----\n")
+    # }
     
     # Clip time series data if specified
     if (clipSamples) {
       # Checking the clipping
       samples_clip <- clip_timeseries(samples, clip_indices, clip_mins, clip_maxs)
       samples <- samples_clip
-      if (debug) {
-        cat('saved clip\n')
-      }
+      # if (debug) {
+      #   cat('saved clip\n')
+      # }
     }
     
     if (clipOutliers) {
-      if (debug) {
-        cat('Clipping samples if needed\n')
-      }
+      # if (debug) {
+      #   cat('Clipping samples if needed\n')
+      # }
       
       savefile <- file.path(savepathpreclip, paste0('ind_', number, '_preclip.txt'))
       write.table(samples, file = savefile, sep = ',', row.names = FALSE, col.names = FALSE)
@@ -162,14 +167,14 @@ for (j in 1:num_iterations) {
       
       samples <- samples_clip
       
-      if (debug) {
-        for (p in 1:ncol(samples)) {
-          inds_post <- which(samples[, p] > max_clip_threshold)
-          cat("post clip:", inds_post, samples[inds_post, p], p, "\n")
-        }
-        cat("---- TEST post clip -----\n")
-        cat('saved clip\n')
-      }
+      #  if (debug) {
+      #   for (p in 1:ncol(samples)) {
+      #     inds_post <- which(samples[, p] > max_clip_threshold)
+      #     cat("post clip:", inds_post, samples[inds_post, p], p, "\n")
+      #   }
+      #   cat("---- TEST post clip -----\n")
+      #   cat('saved clip\n')
+      # }
     
       savefile <- file.path(savepathclip, paste0('ind_', number, '.txt'))
     }
@@ -177,5 +182,6 @@ for (j in 1:num_iterations) {
     write.table(samples, file = savefile, sep = ',', row.names = FALSE, col.names = FALSE)
   }
 }
+
 
 

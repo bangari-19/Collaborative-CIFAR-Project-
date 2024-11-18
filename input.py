@@ -2,9 +2,9 @@
 
 
 size=6
-pathin='/Users/reneehlozek/Dropbox/CIFAR_Sims/240415/true_nonoise/t_100_ar_0.6_rep_1/'
-pathout='/Users/reneehlozek/Dropbox/CIFAR_Sims/240415/pythonsims_t_100_ar_0.6_rep_1/'
-num_participants=1  
+pathin='/Users/reneehlozek/Dropbox/CIFAR_Sims/230222_syncrng_replaceNF/true_noisefree/t_200_ar_0.6_rep_1/'
+pathout='/Users/reneehlozek/Dropbox/CIFAR_Sims/230222_syncrng_replaceNF/pythondata/t_200_ar_0.6_rep_1/'
+num_participants=150  
 num_iterations = 1
 save=True
 
@@ -23,7 +23,7 @@ maskZero = True
 start = [0,0,0,0,0,0]
 
 # Size of simulation
-steps=100
+steps=200
 
 # Are you clipping/truncating the time series
 clip_samples=False
