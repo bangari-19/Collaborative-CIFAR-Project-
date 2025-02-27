@@ -121,11 +121,12 @@ def generate_timeseries(start,len,contempamp, contempmat, contempcov, lagamp, la
     
     
     if save:
-            #print(savepath)
+            print(savepath)
             try:
                 os.makedirs(savepath)
             except:
                 print('savepath dir exists %i'%csvnum)
+                
 
             save_forR(noisy_lagmat,noisy_contempmat,savepath+'ind_%i.csv'%csvnum)
 #            save_matrix(noisy_lagmat, savepath+'noisy_lagmat_%i.csv'%csvnum)

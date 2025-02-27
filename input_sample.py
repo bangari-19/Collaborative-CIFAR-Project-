@@ -2,8 +2,8 @@
 
 
 size=6
-pathin='/Users/reneehlozek/Dropbox/CIFAR_Sims/230222_syncrng_replaceNF/true_noisefree/t_200_ar_0.6_rep_1/'
-pathout='/Users/reneehlozek/Dropbox/CIFAR_Sims/230222_syncrng_replaceNF/pythondata/t_200_ar_0.6_rep_1/'
+pathin='/Users/reneehlozek/Dropbox/CIFAR_Sims/230222_syncrng_replace_26Feb2025/true_noisefree/t_200_ar_0.6_rep_1/'
+pathout='/Users/reneehlozek/Dropbox/CIFAR_Sims/230222_syncrng_replace_26Feb2025/pythondata/t_200_ar_0.6_rep_1/'
 num_participants = XXX  
 num_iterations = 1
 save=True

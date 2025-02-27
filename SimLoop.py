@@ -5,7 +5,7 @@ import sys
 import os
 import random
 
-random.seed(1230)
+random.seed(123456)
 # Large scale iteration code
 
 participant_vec = [150]
