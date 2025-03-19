@@ -68,7 +68,7 @@ def coeff_draw_from_cov(amplitude, mat,cov,mask):
     import matplotlib.pyplot as plt
     size=len(cov)
 
-    plotmat=False
+    plotmat=True
     # noRand=True # are we adding random noise to matrices
     
     # if noRand:
@@ -198,7 +198,8 @@ def clip_outliers(timeseries, sigma, measure_amp,debug,start, contempamp, contem
                 ts[minind,i]=tmp[i]
                 count+=1
 
-                if debug:   
+                if debug:  
+                    
                     print(ts[minind-1:minind+2,i], 'after', count,countmax)
                     print('-----')
 

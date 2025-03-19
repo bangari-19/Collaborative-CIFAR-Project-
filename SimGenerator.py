@@ -117,6 +117,7 @@ for j in range(input.num_iterations):
         
         
         if input.debug:
+            print('printing measurecov')
             print(np.sqrt(np.diagonal(measureCov)[0])*3, 'max')
             for p in range(np.shape(samples)[1]):
 

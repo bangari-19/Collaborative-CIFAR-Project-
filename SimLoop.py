@@ -10,7 +10,7 @@ random.seed(123456)
 
 participant_vec = [150]
 timesteps = [200] #[50, 100, 200, 400]
-ampContempVec = [0.01]# [0.01, 0.05, 0.1 ]
+ampContempVec = [0.1]# [0.01, 0.05, 0.1 ]
 ampLaggedVec=[0.01] #, 0.05, 0.1]
 ampMeasureVec=[1.0] #, 0.5, 1, 1.5]
 maskVec=[True] #, False]

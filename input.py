@@ -12,7 +12,7 @@ save=True
 covContempName='randn'
 covLaggedName='randn'
 measurecovName='diag'
-ampContemp = 0.01
+ampContemp = 0.1
 ampLagged = 0.01
 ampMeasure = 1.0
 
@@ -32,6 +32,6 @@ clip_mins=[0.5, 0.7]
 clip_maxs=[0.8,1.3]
 
 clip_outliers=True
-clip_sigma=20
+clip_sigma=5
 
 debug=False
