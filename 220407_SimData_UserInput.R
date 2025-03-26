@@ -9,6 +9,16 @@ p_con_input <- readline(prompt = "Enter the proportion of contemporaneous paths 
 con_b_input <- readline(prompt = "Enter the contemporaneous path coefficient (e.g., 0.3 or -0.3): ")
 lag_b_input <- readline(prompt = "Enter the lagged path coefficient (e.g., 0.3 or -0.3): ")
 
+# Prompt for group-level paths
+group_paths_input <- readline(prompt = "Enter group-level paths as row,col pairs separated by semicolons (e.g., 3,5;4,6): ")
+ar_paths_input <- readline(prompt = "Enter AR paths as row,col pairs separated by semicolons (e.g., 2,2;4,4;6,6): ")
+parse_paths <- function(input_str) {
+  path_list <- strsplit(input_str, ";")[[1]]
+  do.call(rbind, lapply(path_list, function(x) as.integer(unlist(strsplit(x, ",")))))
+}
+group_paths <- parse_paths(group_paths_input)
+ar_paths <- parse_paths(ar_paths_input)
+
 # Convert to correct data types
 nvar <- as.integer(nvar_input)
 AR <- as.numeric(AR_input)
@@ -27,18 +37,31 @@ cat("Proportion of Group Paths:", p.group, "\n")
 cat("Proportion of Contemporaneous Paths:", p.con, "\n")
 cat("Contemporaneous Path Coefficient:", con.b, "\n")
 cat("Lagged Path Coefficient:", lag.b, "\n")
+cat("Group-Level Paths (row, col):\n")
+print(group_paths)
+cat("AR Paths (row, col):\n")
+print(ar_paths)
 
 # Generate matrices
-mat.generate.asw <- function(p.con, nvar, AR, dens, p.group, con.b, lag.b) {
+mat.generate.asw <- function(p.con, nvar, AR, dens, p.group, con.b, lag.b, group_paths, ar_paths) {
   A <- matrix(0, ncol = nvar, nrow = nvar)
   Phi <- matrix(0, ncol = nvar, nrow = nvar)
   
+  group_inds <- group_paths
+  diag_inds <- ar_paths
+  
   indices <- which(Phi == 0, arr.ind = TRUE)
-  row.col <- c(17, 24, 31, 28)
-  diag.set <- c(8, 22, 36)
+  # flatten (row, col) indices
+  find_indices <- function(coords, indices_matrix) {
+    apply(coords, 1, function(rc) {
+      which(apply(indices_matrix, 1, function(x) all(x == rc)))
+    })
+  }
+  row.col <- find_indices(group_inds, indices)
+  diag.set <- find_indices(diag_inds, indices)
   
   n.p.1 <- row.col[1:round(p.con*length(row.col))]
-  n.p.2 <- row.col[(length(n.p.1)+1):length(row.col)]
+  n.p.2 <- if (length(n.p.1) < length(row.col)) row.col[(length(n.p.1)+1):length(row.col)] else integer(0)
   
   grp.con <- n.p.1
   grp.lag <- n.p.2
@@ -109,8 +132,12 @@ res <- mat.generate.asw(
   p.group = p.group, 
   dens = dens,
   con.b = con.b, 
-  lag.b = lag.b
+  lag.b = lag.b,
+  group_paths = group_paths,
+  ar_paths = ar_paths
 )
+print(res)
+
 
 # Generate time series
 # Can also make t user-defined
