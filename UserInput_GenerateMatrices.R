@@ -21,11 +21,24 @@ ui <- fluidPage(
                                 value = "6,1\n5,4", rows = 4))
       ),
       
-      fluidRow(
-        column(6, textAreaInput("indiv_con_paths", "Contemporaneous Individual-Level Paths (row,col):", 
-                                value = "1,2", rows = 3)),
-        column(6, textAreaInput("indiv_lag_paths", "Lagged Individual-Level Paths (row,col):", 
-                                value = "2,4", rows = 3))
+      radioButtons("indiv_mode", "Individual Path Entry Mode:",
+                   choices = c("Confirmatory" = "confirmatory", "Random" = "random"),
+                   selected = "confirmatory"),
+      
+      conditionalPanel(
+        condition = "input.indiv_mode == 'confirmatory'",
+        fluidRow(
+          column(6, textAreaInput("indiv_con_paths", "Contemporaneous Individual-Level Paths (row,col):", 
+                                  value = "1,2", rows = 3)),
+          column(6, textAreaInput("indiv_lag_paths", "Lagged Individual-Level Paths (row,col):", 
+                                  value = "2,4", rows = 3))
+        )
+      ),
+      
+      conditionalPanel(
+        condition = "input.indiv_mode == 'random'",
+        sliderInput("dens", "Density (Proportion of All Paths):", min = 0, max = 1, value = 0.2, step = 0.01),
+        sliderInput("p_group", "Proportion of Group-Level Paths:", min = 0, max = 1, value = 0.5, step = 0.01)
       ),
       
       numericInput("noise_sd", "Standard Deviation for Gaussian Noise:", value = 0.01, min = 0, step = 0.005),
@@ -75,11 +88,34 @@ server <- function(input, output) {
     if (nrow(ar_coords) > 0) {
       for (i in 1:nrow(ar_coords)) Phi[ar_coords[i,1], ar_coords[i,2]] <- input$AR
     }
-    if (nrow(indiv_con_coords) > 0) {
-      for (i in 1:nrow(indiv_con_coords)) A[indiv_con_coords[i,1], indiv_con_coords[i,2]] <- input$conb
-    }
-    if (nrow(indiv_lag_coords) > 0) {
-      for (i in 1:nrow(indiv_lag_coords)) Phi[indiv_lag_coords[i,1], indiv_lag_coords[i,2]] <- input$lagb
+    
+    if (input$indiv_mode == "confirmatory") {
+      if (nrow(indiv_con_coords) > 0) {
+        for (i in 1:nrow(indiv_con_coords)) A[indiv_con_coords[i,1], indiv_con_coords[i,2]] <- input$conb
+      }
+      if (nrow(indiv_lag_coords) > 0) {
+        for (i in 1:nrow(indiv_lag_coords)) Phi[indiv_lag_coords[i,1], indiv_lag_coords[i,2]] <- input$lagb
+      }
+    } else if (input$indiv_mode == "random") {
+      v <- input$nvar
+      pos.all <- (v * v - v) * 2
+      cnt.all <- input$dens * (1 - input$p_group) * pos.all
+      rand <- sample(c(round(cnt.all/2), round(cnt.all) - round(cnt.all/2)), size = 2, replace = FALSE)
+      
+      indices.A <- which(A == 0, arr.ind = TRUE)
+      indices.A <- indices.A[which(indices.A[,1] != indices.A[,2]), ]
+      
+      indices.Phi <- which(Phi == 0, arr.ind = TRUE)
+      
+      if (nrow(indices.A) >= rand[1]) {
+        row.col.A <- sample(1:nrow(indices.A), rand[1], replace = FALSE)
+        A[indices.A[row.col.A, , drop = FALSE]] <- input$conb
+      }
+      
+      if (nrow(indices.Phi) >= rand[2]) {
+        row.col.Phi <- sample(1:nrow(indices.Phi), rand[2], replace = FALSE)
+        Phi[indices.Phi[row.col.Phi, , drop = FALSE]] <- input$lagb
+      }
     }
     
     A[which(A != 0, arr.ind = TRUE)] <- A[which(A != 0, arr.ind = TRUE)] + 
