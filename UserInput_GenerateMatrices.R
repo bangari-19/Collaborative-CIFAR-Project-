@@ -1,141 +1,176 @@
+# Required libraries
 library(shiny)
 library(ggplot2)
 library(reshape2)
+library(shinyBS)
 
+# --- UI ---
 ui <- fluidPage(
-  titlePanel("Group & AR Path Matrix Generator with Individual Paths and Noise"),
+  titlePanel("Time Series Matrix Simulator"),
   
   sidebarLayout(
     sidebarPanel(
-      numericInput("nvar", "Number of Variables (nvar):", value = 6, min = 1, step = 1),
-      numericInput("AR", "Auto-Regressive Coefficient:", value = 0.5),
-      numericInput("conb", "Contemporaneous Beta:", value = 0.3),
-      numericInput("lagb", "Lagged Beta:", value = 0.3),
-      textAreaInput("ar_paths", "AR Paths (row,col):", 
-                    value = "2,2\n4,4\n6,6", rows = 3),
+      numericInput("n_people", "Number of People in Study:", value = 10, min = 1),
+      numericInput("time_steps", "Number of Time Steps:", value = 100, min = 1),
+      numericInput("n_vars", "Number of Variables (N):", value = 6, min = 2),
+      bsTooltip("n_vars", "Contemporaneous total = N*(N-1), Lagged total = N*N.", "right", options = list(container = "body")),
       
-      fluidRow(
-        column(6, textAreaInput("group_con_paths", "Contemporaneous Group-Level Paths (row,col):", 
-                                value = "3,5\n4,6", rows = 4)),
-        column(6, textAreaInput("group_lag_paths", "Lagged Group-Level Paths (row,col):", 
-                                value = "6,1\n5,4", rows = 4))
-      ),
+      numericInput("network_density", "Total Network Density (%)", value = 20, min = 0, max = 100),
+      bsTooltip("network_density", "Percent of total possible paths (contemp + lagged) that are active.", "right", options = list(container = "body")),
       
-      radioButtons("indiv_mode", "Individual Path Entry Mode:",
-                   choices = c("Confirmatory" = "confirmatory", "Random" = "random"),
-                   selected = "confirmatory"),
+      numericInput("percent_contemp", "Percentage of Active Paths that are Contemporaneous (%)", value = 40, min = 0, max = 100),
+      bsTooltip("percent_contemp", "Split of active paths: % contemporaneous vs % lagged.", "right", options = list(container = "body")),
       
-      conditionalPanel(
-        condition = "input.indiv_mode == 'confirmatory'",
-        fluidRow(
-          column(6, textAreaInput("indiv_con_paths", "Contemporaneous Individual-Level Paths (row,col):", 
-                                  value = "1,2", rows = 3)),
-          column(6, textAreaInput("indiv_lag_paths", "Lagged Individual-Level Paths (row,col):", 
-                                  value = "2,4", rows = 3))
-        )
-      ),
+      hr(),
+      h3("Lagged Matrix (Φ)"),
+      
+      textAreaInput("ar_paths", "User-defined AR Paths (row,col pairs)", placeholder = "1,1; 2,2"),
+      numericInput("ar_coeff", "AR Coefficient:", value = 0.5),
+      
+      radioButtons("group_model_lag", "Group-level Path Model (Lagged):",
+                   choices = c("Random" = "random", "User-specified" = "confirm")),
       
       conditionalPanel(
-        condition = "input.indiv_mode == 'random'",
-        sliderInput("dens", "Density (Proportion of All Paths):", min = 0, max = 1, value = 0.2, step = 0.01),
-        sliderInput("p_group", "Proportion of Group-Level Paths:", min = 0, max = 1, value = 0.5, step = 0.01)
+        condition = "input.group_model_lag == 'confirm'",
+        textAreaInput("group_indices_lag", "Group-level Lagged Paths (row,col pairs)", placeholder = "1,2; 3,4")
       ),
       
-      numericInput("noise_sd", "Standard Deviation for Gaussian Noise:", value = 0.01, min = 0, step = 0.005),
-      numericInput("ts_length", "Length of Time Series (t):", value = 100, min = 1, step = 1),
-      actionButton("generate", "Generate Matrices and Simulate Time Series")
+      numericInput("group_lag_beta", "Group-level Lagged Beta:", value = 0.3),
+      numericInput("group_lag_sd", "Group-level Lagged Beta SD:", value = 0.01),
+      
+      numericInput("indiv_lag_beta", "Individual-level Lagged Beta:", value = 0.3),
+      numericInput("indiv_lag_sd", "Individual-level Lagged Beta SD:", value = 0.01),
+      
+      hr(),
+      h3("Contemporaneous Matrix (A)"),
+      
+      radioButtons("group_model_con", "Group-level Path Model (Contemporaneous):",
+                   choices = c("Random" = "random", "User-specified" = "confirm")),
+      
+      conditionalPanel(
+        condition = "input.group_model_con == 'confirm'",
+        textAreaInput("group_indices_con", "Group-level Contemporaneous Paths (row,col pairs)", placeholder = "1,2; 2,3")
+      ),
+      
+      numericInput("group_con_beta", "Group-level Contemporaneous Beta:", value = 0.3),
+      numericInput("group_con_sd", "Group-level Contemporaneous Beta SD:", value = 0.01),
+      
+      numericInput("indiv_con_beta", "Individual-level Contemporaneous Beta:", value = 0.3),
+      numericInput("indiv_con_sd", "Individual-level Contemporaneous Beta SD:", value = 0.01),
+      
+      hr(),
+      h3("Timeseries Noise Settings"),
+      numericInput("overall_noise", "Overall Timeseries Noise SD:", value = 0.1, min = 0),
+      
+      actionButton("run_sim", "Run Simulation")
     ),
     
     mainPanel(
-      h4("Lagged Matrix (Phi)"),
+      h4("Lagged Matrix Output"),
       plotOutput("phi_plot"),
-      h4("Contemporaneous Matrix (A)"),
+      h4("Contemporaneous Matrix Output"),
       plotOutput("a_plot"),
-      h4("Simulated Time Series Plot"),
+      h4("Simulated Time Series Output"),
       plotOutput("ts_plot")
     )
   )
 )
 
+# --- SERVER ---
 server <- function(input, output) {
-  generate_matrices <- eventReactive(input$generate, {
-    nvar <- input$nvar
+  
+  parse_indices <- function(txt) {
+    if (nzchar(txt)) {
+      pairs <- unlist(strsplit(txt, ";"))
+      do.call(rbind, lapply(pairs, function(pair) as.integer(unlist(strsplit(trimws(pair), ",")))))
+    } else {
+      matrix(nrow = 0, ncol = 2)
+    }
+  }
+  
+  generate_matrices <- eventReactive(input$run_sim, {
+    v <- input$n_vars
+    A <- matrix(0, v, v)
+    Phi <- matrix(0, v, v)
     
-    parse_coords <- function(txt) {
-      if (nzchar(txt)) {
-        rows <- unlist(strsplit(txt, "\n"))
-        do.call(rbind, lapply(rows, function(x) as.integer(unlist(strsplit(x, ",")))))
-      } else {
-        matrix(nrow = 0, ncol = 2)
+    # Total possible paths
+    total_contemp_paths <- v * (v - 1)
+    total_lagged_paths <- v * v
+    total_possible_paths <- total_contemp_paths + total_lagged_paths
+    
+    # Number of active paths based on network density
+    n_active_paths <- round(input$network_density / 100 * total_possible_paths)
+    
+    # Split active paths into contemporaneous and lagged
+    n_contemp_active <- round(input$percent_contemp / 100 * n_active_paths)
+    n_lagged_active <- n_active_paths - n_contemp_active
+    
+    # -- AR paths
+    ar_coords <- parse_indices(input$ar_paths)
+    for (i in seq_len(nrow(ar_coords))) {
+      Phi[ar_coords[i, 1], ar_coords[i, 2]] <- input$ar_coeff
+    }
+    
+    ### --- LAGGED PATHS ---
+    pos_lag <- which(matrix(1:(v*v), v) > 0, arr.ind = TRUE)
+    
+    if (input$group_model_lag == "confirm") {
+      group_lag_coords <- parse_indices(input$group_indices_lag)
+      n_group_lag <- nrow(group_lag_coords)
+      for (i in seq_len(n_group_lag)) {
+        Phi[group_lag_coords[i, 1], group_lag_coords[i, 2]] <- rnorm(1, mean = input$group_lag_beta, sd = input$group_lag_sd)
+      }
+    } else {
+      n_group_lag <- round(0.5 * n_lagged_active)
+      selected_lag <- pos_lag[sample(nrow(pos_lag), n_group_lag), , drop = FALSE]
+      for (i in seq_len(nrow(selected_lag))) {
+        Phi[selected_lag[i, 1], selected_lag[i, 2]] <- rnorm(1, mean = input$group_lag_beta, sd = input$group_lag_sd)
       }
     }
     
-    group_con_coords <- parse_coords(input$group_con_paths)
-    group_lag_coords <- parse_coords(input$group_lag_paths)
-    ar_coords <- parse_coords(input$ar_paths)
-    indiv_con_coords <- parse_coords(input$indiv_con_paths)
-    indiv_lag_coords <- parse_coords(input$indiv_lag_paths)
-    
-    A <- matrix(0, nvar, nvar)
-    Phi <- matrix(0, nvar, nvar)
-    
-    if (nrow(group_con_coords) > 0) {
-      for (i in 1:nrow(group_con_coords)) A[group_con_coords[i,1], group_con_coords[i,2]] <- input$conb
-    }
-    if (nrow(group_lag_coords) > 0) {
-      for (i in 1:nrow(group_lag_coords)) Phi[group_lag_coords[i,1], group_lag_coords[i,2]] <- input$lagb
-    }
-    if (nrow(ar_coords) > 0) {
-      for (i in 1:nrow(ar_coords)) Phi[ar_coords[i,1], ar_coords[i,2]] <- input$AR
+    remaining_lag <- setdiff(1:nrow(pos_lag), selected_lag)
+    n_indiv_lag <- n_lagged_active - n_group_lag
+    selected_indiv_lag <- pos_lag[sample(remaining_lag, n_indiv_lag), , drop = FALSE]
+    for (i in seq_len(nrow(selected_indiv_lag))) {
+      Phi[selected_indiv_lag[i, 1], selected_indiv_lag[i, 2]] <- rnorm(1, mean = input$indiv_lag_beta, sd = input$indiv_lag_sd)
     }
     
-    if (input$indiv_mode == "confirmatory") {
-      if (nrow(indiv_con_coords) > 0) {
-        for (i in 1:nrow(indiv_con_coords)) A[indiv_con_coords[i,1], indiv_con_coords[i,2]] <- input$conb
+    ### --- CONTEMPORANEOUS PATHS ---
+    pos_con <- which(row(A) != col(A), arr.ind = TRUE)
+    
+    if (input$group_model_con == "confirm") {
+      group_con_coords <- parse_indices(input$group_indices_con)
+      n_group_con <- nrow(group_con_coords)
+      for (i in seq_len(n_group_con)) {
+        A[group_con_coords[i, 1], group_con_coords[i, 2]] <- rnorm(1, mean = input$group_con_beta, sd = input$group_con_sd)
       }
-      if (nrow(indiv_lag_coords) > 0) {
-        for (i in 1:nrow(indiv_lag_coords)) Phi[indiv_lag_coords[i,1], indiv_lag_coords[i,2]] <- input$lagb
-      }
-    } else if (input$indiv_mode == "random") {
-      v <- input$nvar
-      pos.all <- (v * v - v) * 2
-      cnt.all <- input$dens * (1 - input$p_group) * pos.all
-      rand <- sample(c(round(cnt.all/2), round(cnt.all) - round(cnt.all/2)), size = 2, replace = FALSE)
-      
-      indices.A <- which(A == 0, arr.ind = TRUE)
-      indices.A <- indices.A[which(indices.A[,1] != indices.A[,2]), ]
-      
-      indices.Phi <- which(Phi == 0, arr.ind = TRUE)
-      
-      if (nrow(indices.A) >= rand[1]) {
-        row.col.A <- sample(1:nrow(indices.A), rand[1], replace = FALSE)
-        A[indices.A[row.col.A, , drop = FALSE]] <- input$conb
-      }
-      
-      if (nrow(indices.Phi) >= rand[2]) {
-        row.col.Phi <- sample(1:nrow(indices.Phi), rand[2], replace = FALSE)
-        Phi[indices.Phi[row.col.Phi, , drop = FALSE]] <- input$lagb
+    } else {
+      n_group_con <- round(0.5 * n_contemp_active)
+      selected_con <- pos_con[sample(nrow(pos_con), n_group_con), , drop = FALSE]
+      for (i in seq_len(nrow(selected_con))) {
+        A[selected_con[i, 1], selected_con[i, 2]] <- rnorm(1, mean = input$group_con_beta, sd = input$group_con_sd)
       }
     }
     
-    A[which(A != 0, arr.ind = TRUE)] <- A[which(A != 0, arr.ind = TRUE)] + 
-      rnorm(n = length(which(A != 0)), mean = 0, sd = input$noise_sd)
-    
-    Phi[which(Phi != 0, arr.ind = TRUE)] <- Phi[which(Phi != 0, arr.ind = TRUE)] + 
-      rnorm(n = length(which(Phi != 0)), mean = 0, sd = input$noise_sd)
+    remaining_con <- setdiff(1:nrow(pos_con), selected_con)
+    n_indiv_con <- n_contemp_active - n_group_con
+    selected_indiv_con <- pos_con[sample(remaining_con, n_indiv_con), , drop = FALSE]
+    for (i in seq_len(nrow(selected_indiv_con))) {
+      A[selected_indiv_con[i, 1], selected_indiv_con[i, 2]] <- rnorm(1, mean = input$indiv_con_beta, sd = input$indiv_con_sd)
+    }
     
     list(A = A, Phi = Phi)
   })
   
-  simulate_timeseries <- eventReactive(input$generate, {
+  simulate_timeseries <- eventReactive(input$run_sim, {
     mat <- generate_matrices()
     A <- mat$A
     Phi <- mat$Phi
     v <- nrow(A)
-    t <- input$ts_length
+    t <- input$time_steps
     st <- t + 50
     
-    noise <- matrix(rnorm(v * st, 0, 1), v)
+    noise <- matrix(rnorm(v * st, 0, input$overall_noise), v)
     I <- diag(v)
     time <- matrix(0, nrow = v, ncol = (st + 1))
     time1 <- matrix(0, nrow = v, ncol = st)
@@ -180,14 +215,14 @@ server <- function(input, output) {
       scale_x_discrete(position = "top")
   }
   
-  output$a_plot <- renderPlot({
-    req(generate_matrices())
-    draw_matrix_plot(generate_matrices()$A, "Contemporaneous Matrix (A)", lag_labels = FALSE)
-  })
-  
   output$phi_plot <- renderPlot({
     req(generate_matrices())
-    draw_matrix_plot(generate_matrices()$Phi, "Lagged Matrix (Phi)", lag_labels = TRUE)
+    draw_matrix_plot(generate_matrices()$Phi, "Lagged Matrix", lag_labels = TRUE)
+  })
+  
+  output$a_plot <- renderPlot({
+    req(generate_matrices())
+    draw_matrix_plot(generate_matrices()$A, "Contemporaneous Matrix")
   })
   
   output$ts_plot <- renderPlot({
@@ -201,4 +236,5 @@ server <- function(input, output) {
   })
 }
 
+# Run the app
 shinyApp(ui = ui, server = server)
