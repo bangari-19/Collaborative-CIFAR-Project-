@@ -1,7 +1,8 @@
-#230222: AR=.6; Contemp = .35; lagged = .45, noise=.01
+#NC to rerun, making AR=.6 and make contemp/lagged=.45, and noise=.05
+#230328 Update: AR=.5; Contemp = .3; lagged=.4, and noise=.01
+
 rm(list=ls())
-seed=123456
-set.seed(seed)
+
 #######################################################
 #### 1. load functions needed to simulate the data ####
 #######################################################
@@ -17,7 +18,6 @@ mat.generate.asw <- function(p.con,nvar,AR,dens,p.group,con.b,lag.b){
     indices <- which(Phi == 0, arr.ind = TRUE)        ###create data frame that lists all combinations of columns/rows in matrices. Run "indices <- indices[which(indices[,1] != indices[,2]), ]" to kick out diagonal
     row.col<-c(17, 24, 31, 28)                        ###select group-level associations
     diag.set<-c(8, 22, 36)                            ###select AR paths 
-    print(round(p.con*length(row.col)))
     n.p.1<-row.col[1:round(p.con*length(row.col))]    ###identify contemporaneous group paths 
     n.p.2<-row.col[(length(n.p.1)+1):length(row.col)] ###identify lagged group paths 
     grp.con <- n.p.1                                  ###name contemporaneous group paths
@@ -35,7 +35,7 @@ mat.generate.asw <- function(p.con,nvar,AR,dens,p.group,con.b,lag.b){
   level <- "grp"
   all.lvl <- matrix(NA, ncol = ncol(all), nrow = nrow(all))
   all.lvl[ind.pres] <- level
-  
+
   all_sub1 <- all
   all_lvl1 <- all.lvl
   
@@ -64,9 +64,9 @@ ts.generate.asw <- function (mat, lvl, t,dens,p.group,con.b,lag.b,p.con) {
       row.col.Phi      <- sample(1:nrow(indices.Phi), rand[2], replace = F) 
       Phi[indices.Phi[row.col.Phi,]] <- lag.b                                                       ###set betas for lagged and contemporaneous paths
       A[indices.A[row.col.A,]]     <- con.b
-      noise.inds      <- which(A != 0, arr.ind = TRUE)                                              ####add noise to A betas, SD =.1
+      noise.inds      <- which(A != 0, arr.ind = TRUE)                                              ####add noise to A betas, SD =.01
       A[noise.inds]   <- A[noise.inds] + rnorm(n = nrow(noise.inds), mean = 0, sd = .01)
-      noise.inds      <- which(Phi != 0, arr.ind = TRUE)                                            ###add noise to Phi betas, SD =.1
+      noise.inds      <- which(Phi != 0, arr.ind = TRUE)                                            ###add noise to Phi betas, SD =.01
       Phi[noise.inds] <- Phi[noise.inds] + rnorm(n = nrow(noise.inds), mean = 0, sd = .01)
       break
     }
@@ -103,73 +103,117 @@ ts.generate.asw <- function (mat, lvl, t,dens,p.group,con.b,lag.b,p.con) {
 
 # enter simulation parameters
 v             <- c(6) # Number of variables
-n             <- c(150) # number of individuals
-t             <- c(100) # Number of time points
+n             <- c(25) # number of individuals
+t             <- c(200) # Number of time points
 rep           <- seq(1) # replications per condition 
-ar            <-c(.6) # ar paths to try
+ar            <-c(.5) # ar paths to try
 conditions    <- expand.grid(t, n, v, ar,rep)
 all           <- rbind(conditions)
 colnames(all) <- c("t", "n", "v", "ar", "rep")
-negcon <- c(.35, -.35)                                     #to create the negative numbers
-neglag <- c(.45, -.45)                                     #to create the negative numbers
+negcon <- c(.3, -.3)                                     #to create the negative numbers
+neglag <- c(.4, -.4)                                     #to create the negative numbers
 
 # This loop generates a folder name for each condition and replication
-for (i in 1:nrow(all)){
-  all$folder[i] <- paste("t",all$t[i],
-                         "ar",all$ar[i],"rep",all$rep[i],sep="_")
+for (i in 1:nrow(all)) {
+  all$folder[i] <- paste("t", all$t[i], "ar", all$ar[i], "rep", all$rep[i], sep = "_")
 }
 
 rownames(all) <- NULL
-colnames(all) <- c("t","n","v","ar","rep","folder")
-all$t         <- as.numeric(as.character(all$t))
-all$n         <- as.numeric(as.character(all$n))
-all$ar         <- as.numeric(as.character(all$ar))
+colnames(all) <- c("t", "n", "v", "ar", "rep", "folder")
+all$t  <- as.numeric(as.character(all$t))
+all$n  <- as.numeric(as.character(all$n))
+all$ar <- as.numeric(as.character(all$ar))
 
-
-# name directories to place simulated data in (Change)
-dir.create('/Users/reneehlozek/Dropbox/CIFAR_Sims/230222_ORIG_26Feb2025/')
-data.path <- '/Users/reneehlozek/Dropbox/CIFAR_Sims/230222_ORIG_26Feb2025/data'
-true.path <- '/Users/reneehlozek/Dropbox/CIFAR_Sims/230222_ORIG_26Feb2025/true'
-level.path <- '/Users/reneehlozek/Dropbox/CIFAR_Sims/230222_ORIG_26Feb2025/levels'
+# Create parent directories (change if needed)
+dir.create('~/Dropbox (Personal)/Research Projects/CIFAR/simset1missing25')
+data.path  <- '~/Dropbox (Personal)/Research Projects/CIFAR/simset1missing25/data'
+true.path  <- '~/Dropbox (Personal)/Research Projects/CIFAR/simset1missing25/true'
+level.path <- '~/Dropbox (Personal)/Research Projects/CIFAR/simset1missing25/levels'
 
 dir.create(data.path)
 dir.create(true.path)
 dir.create(level.path)
 
-# Creates actual folders for each iteration
+# Create subfolders for each condition
 folders <- all$folder
-for (i in 1:nrow(all)){
-  data <- file.path(data.path, folders[i])
-  dir.create(data)
-  true <- file.path(true.path, folders[i])
-  dir.create(true)
-  level <- file.path(level.path, folders[i])
-  dir.create(level)
+for (i in 1:nrow(all)) {
+  dir.create(file.path(data.path,  folders[i]))
+  dir.create(file.path(true.path,  folders[i]))
+  dir.create(file.path(level.path, folders[i]))
 }
 
-# Does the simulations
-for (i in 1:nrow(all)){
-  if (!length(list.files(file.path(data.path,all$folder[i]))) %in% c(50)) {
+# Run simulations
+for (i in 1:nrow(all)) {
+  if (!length(list.files(file.path(data.path, all$folder[i]))) %in% c(50)) {
     
-    # generate group matrix for each simulated data set
-    res <- mat.generate.asw(p.con = .50, 
-                            nvar = all$v[i], AR=all$ar[i],
-                            p.group = .50,dens = .20,
-                            con.b = sample(negcon, 1), lag.b = sample(neglag, 1))
+    # Generate matrix
+    res <- mat.generate.asw(
+      p.con = 0.50,
+      nvar = all$v[i],
+      AR = all$ar[i],
+      p.group = 0.50,
+      dens = 0.20,
+      con.b = sample(negcon, 1),
+      lag.b = sample(neglag, 1)
+    )
     
-    #for each individual,generate matrix and ts
-    for (a in 1:all$n[i]){
+    for (a in 1:all$n[i]) {
       
-      out <- ts.generate.asw(mat = res$sub1,
-                             lvl = res$lvl1,
-                             t   = all$t[i],
-                             p.group = .50,dens = .20,
-                             con.b = sample(negcon, 1), lag.b = sample(neglag, 1),
-                             p.con = .50)
+      out <- ts.generate.asw(
+        mat  = res$sub1,
+        lvl  = res$lvl1,
+        t    = all$t[i],
+        p.group = 0.50,
+        dens = 0.20,
+        con.b = sample(negcon, 1),
+        lag.b = sample(neglag, 1),
+        p.con = 0.50
+      )
       
-      out$series <- round(out$series,digits=5)
+      out$series <- round(out$series, digits = 5)
       
+      drop_pct_row <- 0.70                #Natasha added missingness (row-level)
+      target_median_block <- 2            #days in a row
       
+      n_rows <- nrow(out$series)
+      n_total_rows_to_drop <- round(drop_pct_row * n_rows)
+      
+      rows_to_drop <- c()
+      counter <- 0
+      
+      while (counter < n_total_rows_to_drop) {
+        block_size <- max(1, round(rnorm(1, mean = target_median_block, sd = 1)))
+        available_rows <- setdiff(1:n_rows, rows_to_drop)
+        if (length(available_rows) == 0) break
+        
+        start_row <- sample(available_rows, 1)
+        block_rows <- start_row:(start_row + block_size - 1)
+        block_rows <- block_rows[block_rows <= n_rows]
+        
+        rows_to_drop <- c(rows_to_drop, block_rows)
+        counter <- length(unique(rows_to_drop))
+      }
+      
+      rows_to_drop <- unique(rows_to_drop)
+      out$series[rows_to_drop, ] <- NA
+      
+      drop_pct_random <- 0.05   #Add random non-overlapping missingness
+      non_missing_mask <- !is.na(out$series)
+      available_indices <- which(non_missing_mask, arr.ind = TRUE)
+      n_total_available <- nrow(available_indices)
+      n_drop_random <- round(drop_pct_random * prod(dim(out$series)))
+      
+      if (n_total_available > 0) {
+        sampled_indices <- available_indices[
+          sample(1:n_total_available, min(n_drop_random, n_total_available)),
+          , drop = FALSE
+        ]
+        for (idx in seq_len(nrow(sampled_indices))) {
+          out$series[sampled_indices[idx, 1], sampled_indices[idx, 2]] <- NA
+        }
+      }
+
+      # Save simulated files
       write.csv(out$series,
                 file.path(data.path, all$folder[i], paste0("ind_", a, ".csv")),
                 row.names = FALSE)
@@ -182,7 +226,6 @@ for (i in 1:nrow(all)){
                 file.path(level.path, all$folder[i], paste0("ind_", a, ".csv")),
                 row.names = FALSE)
     }
-    
   }
 }
 
